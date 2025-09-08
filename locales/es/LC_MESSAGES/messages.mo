@@ -1,0 +1,176 @@
+# Spanish translations for ServiceTitan Dashboard
+# Copyright (C) 2025 Platform Partners
+# This file is distributed under the same license as the ServiceTitan Dashboard package.
+# FIRST AUTHOR <email@example.com>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ServiceTitan Dashboard 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-01-08 09:00+0000\n"
+"PO-Revision-Date: 2025-01-08 09:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# Dashboard title
+msgid "ServiceTitan - Inflection Points Analysis"
+msgstr "ServiceTitan - Análisis de Puntos de Inflexión"
+
+# Sidebar controls
+msgid "Controls"
+msgstr "Controles"
+
+msgid "Select Company:"
+msgstr "Seleccionar Compañía:"
+
+msgid "Select the company to analyze its inflection points"
+msgstr "Selecciona la compañía para analizar sus puntos de inflexión"
+
+msgid "Generate Analysis"
+msgstr "Generar Análisis"
+
+# Company information
+msgid "Company Information"
+msgstr "Información de la Compañía"
+
+msgid "ID:"
+msgstr "ID:"
+
+msgid "Total Calls:"
+msgstr "Total Llamadas:"
+
+msgid "Years:"
+msgstr "Años:"
+
+msgid "States:"
+msgstr "Estados:"
+
+# Analysis statistics
+msgid "Analysis Statistics"
+msgstr "Estadísticas del Análisis"
+
+msgid "Peaks Identified"
+msgstr "Picos Identificados"
+
+msgid "Valleys Identified"
+msgstr "Valles Identificados"
+
+msgid "Monthly Average"
+msgstr "Promedio Mensual"
+
+msgid "Maximum Variation"
+msgstr "Variación Máxima"
+
+# Peaks and valleys
+msgid "Identified Peaks"
+msgstr "Picos Identificados"
+
+msgid "Identified Valleys"
+msgstr "Valles Identificados"
+
+msgid "No peaks identified"
+msgstr "No se identificaron picos"
+
+msgid "No valleys identified"
+msgstr "No se identificaron valles"
+
+# Monthly data table
+msgid "Detailed Monthly Data"
+msgstr "Datos Mensuales Detallados"
+
+msgid "Month"
+msgstr "Mes"
+
+msgid "Calls"
+msgstr "Llamadas"
+
+msgid "Percentage (%)"
+msgstr "Porcentaje (%)"
+
+msgid "Is Peak"
+msgstr "Es Pico"
+
+msgid "Is Valley"
+msgstr "Es Valle"
+
+# Month names
+msgid "January"
+msgstr "Enero"
+
+msgid "February"
+msgstr "Febrero"
+
+msgid "March"
+msgstr "Marzo"
+
+msgid "April"
+msgstr "Abril"
+
+msgid "May"
+msgstr "Mayo"
+
+msgid "June"
+msgstr "Junio"
+
+msgid "July"
+msgstr "Julio"
+
+msgid "August"
+msgstr "Agosto"
+
+msgid "September"
+msgstr "Septiembre"
+
+msgid "October"
+msgstr "Octubre"
+
+msgid "November"
+msgstr "Noviembre"
+
+msgid "December"
+msgstr "Diciembre"
+
+# Analysis information
+msgid "Analysis Information"
+msgstr "Información del Análisis"
+
+msgid "Methodology:"
+msgstr "Metodología:"
+
+msgid "Data is grouped by month summing all calls from all years"
+msgstr "Los datos se agrupan por mes sumando todas las llamadas de todos los años"
+
+msgid "Monthly percentages of the total annual are calculated"
+msgstr "Se calculan porcentajes mensuales del total anual"
+
+msgid "Peaks and valleys are identified using SciPy find_peaks function"
+msgstr "Los picos y valles se identifican usando la función find_peaks de SciPy"
+
+msgid "Parameters: minimum height = monthly average, minimum distance = 2 months"
+msgstr "Parámetros: altura mínima = promedio mensual, distancia mínima = 2 meses"
+
+msgid "Interpretation:"
+msgstr "Interpretación:"
+
+msgid "Peaks (🔺): Months with higher call concentration"
+msgstr "Picos (🔺): Meses con mayor concentración de llamadas"
+
+msgid "Valleys (🔻): Months with lower call concentration"
+msgstr "Valles (🔻): Meses con menor concentración de llamadas"
+
+msgid "Percentages: Represent the proportion of calls for each month relative to the annual total"
+msgstr "Porcentajes: Representan la proporción de llamadas de cada mes respecto al total anual"
+
+# Loading messages
+msgid "Loading data from BigQuery..."
+msgstr "Cargando datos desde BigQuery..."
+
+msgid "No data found for company"
+msgstr "No se encontraron datos para la compañía"
+
+msgid "Error loading data. Check BigQuery connection."
+msgstr "Error al cargar datos. Verifica la conexión a BigQuery."

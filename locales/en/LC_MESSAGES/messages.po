@@ -1,0 +1,176 @@
+# English translations for ServiceTitan Dashboard
+# Copyright (C) 2025 Platform Partners
+# This file is distributed under the same license as the ServiceTitan Dashboard package.
+# FIRST AUTHOR <email@example.com>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ServiceTitan Dashboard 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-01-08 09:00+0000\n"
+"PO-Revision-Date: 2025-01-08 09:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# Dashboard title
+msgid "ServiceTitan - Inflection Points Analysis"
+msgstr "ServiceTitan - Inflection Points Analysis"
+
+# Sidebar controls
+msgid "Controls"
+msgstr "Controls"
+
+msgid "Select Company:"
+msgstr "Select Company:"
+
+msgid "Select the company to analyze its inflection points"
+msgstr "Select the company to analyze its inflection points"
+
+msgid "Generate Analysis"
+msgstr "Generate Analysis"
+
+# Company information
+msgid "Company Information"
+msgstr "Company Information"
+
+msgid "ID:"
+msgstr "ID:"
+
+msgid "Total Calls:"
+msgstr "Total Calls:"
+
+msgid "Years:"
+msgstr "Years:"
+
+msgid "States:"
+msgstr "States:"
+
+# Analysis statistics
+msgid "Analysis Statistics"
+msgstr "Analysis Statistics"
+
+msgid "Peaks Identified"
+msgstr "Peaks Identified"
+
+msgid "Valleys Identified"
+msgstr "Valleys Identified"
+
+msgid "Monthly Average"
+msgstr "Monthly Average"
+
+msgid "Maximum Variation"
+msgstr "Maximum Variation"
+
+# Peaks and valleys
+msgid "Identified Peaks"
+msgstr "Identified Peaks"
+
+msgid "Identified Valleys"
+msgstr "Identified Valleys"
+
+msgid "No peaks identified"
+msgstr "No peaks identified"
+
+msgid "No valleys identified"
+msgstr "No valleys identified"
+
+# Monthly data table
+msgid "Detailed Monthly Data"
+msgstr "Detailed Monthly Data"
+
+msgid "Month"
+msgstr "Month"
+
+msgid "Calls"
+msgstr "Calls"
+
+msgid "Percentage (%)"
+msgstr "Percentage (%)"
+
+msgid "Is Peak"
+msgstr "Is Peak"
+
+msgid "Is Valley"
+msgstr "Is Valley"
+
+# Month names
+msgid "January"
+msgstr "January"
+
+msgid "February"
+msgstr "February"
+
+msgid "March"
+msgstr "March"
+
+msgid "April"
+msgstr "April"
+
+msgid "May"
+msgstr "May"
+
+msgid "June"
+msgstr "June"
+
+msgid "July"
+msgstr "July"
+
+msgid "August"
+msgstr "August"
+
+msgid "September"
+msgstr "September"
+
+msgid "October"
+msgstr "October"
+
+msgid "November"
+msgstr "November"
+
+msgid "December"
+msgstr "December"
+
+# Analysis information
+msgid "Analysis Information"
+msgstr "Analysis Information"
+
+msgid "Methodology:"
+msgstr "Methodology:"
+
+msgid "Data is grouped by month summing all calls from all years"
+msgstr "Data is grouped by month summing all calls from all years"
+
+msgid "Monthly percentages of the total annual are calculated"
+msgstr "Monthly percentages of the total annual are calculated"
+
+msgid "Peaks and valleys are identified using SciPy find_peaks function"
+msgstr "Peaks and valleys are identified using SciPy find_peaks function"
+
+msgid "Parameters: minimum height = monthly average, minimum distance = 2 months"
+msgstr "Parameters: minimum height = monthly average, minimum distance = 2 months"
+
+msgid "Interpretation:"
+msgstr "Interpretation:"
+
+msgid "Peaks (🔺): Months with higher call concentration"
+msgstr "Peaks (🔺): Months with higher call concentration"
+
+msgid "Valleys (🔻): Months with lower call concentration"
+msgstr "Valleys (🔻): Months with lower call concentration"
+
+msgid "Percentages: Represent the proportion of calls for each month relative to the annual total"
+msgstr "Percentages: Represent the proportion of calls for each month relative to the annual total"
+
+# Loading messages
+msgid "Loading data from BigQuery..."
+msgstr "Loading data from BigQuery..."
+
+msgid "No data found for company"
+msgstr "No data found for company"
+
+msgid "Error loading data. Check BigQuery connection."
+msgstr "Error loading data. Check BigQuery connection."
