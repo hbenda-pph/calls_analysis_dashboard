@@ -518,13 +518,17 @@ def main():
             
             if formatted_annual_table is not None:
                 # Aplicar estilo a la tabla
-                def highlight_max_min(val):
+                def highlight_max_min(row):
                     """Resaltar valores máximos y mínimos en cada fila"""
-                    if val == val.max():
-                        return 'background-color: #90EE90'  # Verde claro para máximo
-                    elif val == val.min():
-                        return 'background-color: #FFB6C1'  # Rosa claro para mínimo
-                    return ''
+                    styles = []
+                    for i, val in enumerate(row):
+                        if val == row.max():
+                            styles.append('background-color: #90EE90')  # Verde claro para máximo
+                        elif val == row.min():
+                            styles.append('background-color: #FFB6C1')  # Rosa claro para mínimo
+                        else:
+                            styles.append('')
+                    return styles
                 
                 def highlight_historical_row(row):
                     """Resaltar la fila histórica con color diferente"""
