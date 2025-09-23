@@ -229,6 +229,96 @@ def create_annual_percentage_table(annual_table, historical_percentages=None):
     
     return formatted_table
 
+def create_scatter_with_midpoints(annual_table, midpoint_lines, company_id, company_name):
+    """
+    Crea un gráfico de dispersión con líneas de punto medio superpuestas.
+    Muestra todos los datos anuales con las marcas históricas.
+    """
+    if annual_table is None or annual_table.empty:
+        return None
+    
+    fig, ax = plt.subplots(figsize=(14, 8))
+    
+    # Preparar datos para dispersión
+    scatter_data = []
+    colors = []
+    labels = []
+    
+    # Recopilar todos los puntos de datos anuales
+    for year in annual_table.index:
+        for month in annual_table.columns:
+            value = annual_table.loc[year, month]
+            if value > 0:  # Solo datos no cero
+                scatter_data.append([month, value])
+                colors.append(f'C{year % 10}')  # Color diferente por año
+                labels.append(f'{year}')
+    
+    # Convertir a arrays
+    scatter_data = np.array(scatter_data)
+    if len(scatter_data) == 0:
+        return None
+    
+    months_scatter = scatter_data[:, 0]
+    values_scatter = scatter_data[:, 1]
+    
+    # Crear gráfico de dispersión
+    scatter = ax.scatter(months_scatter, values_scatter, c=colors, alpha=0.6, s=60, edgecolors='black', linewidth=0.5)
+    
+    # Dibujar líneas de punto medio del gráfico histórico
+    if midpoint_lines:
+        for line in midpoint_lines:
+            if line['is_circular']:
+                # Líneas circulares: dibujar en enero y diciembre
+                ax.axvline(x=1, color=line['color'], linestyle='--', alpha=0.8, linewidth=3)
+                ax.axvline(x=12, color=line['color'], linestyle='--', alpha=0.8, linewidth=3)
+            else:
+                # Líneas normales
+                ax.axvline(x=line['month'], color=line['color'], linestyle='--', alpha=0.8, linewidth=2)
+    
+    # Configurar gráfico
+    ax.set_title(f'Annual Data vs Historical Midpoints - {company_name}\nScatter Plot with Historical Transition Lines', 
+                 fontsize=14, fontweight='bold')
+    ax.set_xlabel('Month', fontsize=12)
+    ax.set_ylabel('Percentage of Total Calls (%)', fontsize=12)
+    ax.set_xticks(range(1, 13))
+    ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+    
+    # Crear leyenda personalizada
+    legend_elements = []
+    
+    # Agregar elementos de líneas históricas
+    if midpoint_lines:
+        green_lines = [line for line in midpoint_lines if line['color'] == 'green']
+        red_lines = [line for line in midpoint_lines if line['color'] == 'red']
+        circular_lines = [line for line in midpoint_lines if line['is_circular']]
+        
+        if green_lines:
+            legend_elements.append(plt.Line2D([0], [0], color='green', linestyle='--', linewidth=2, 
+                                            label=f'Valley-to-Peak Transitions ({len(green_lines)})'))
+        if red_lines:
+            legend_elements.append(plt.Line2D([0], [0], color='red', linestyle='--', linewidth=2, 
+                                            label=f'Peak-to-Valley Transitions ({len(red_lines)})'))
+        if circular_lines:
+            legend_elements.append(plt.Line2D([0], [0], color=circular_lines[0]['color'], linestyle='--', linewidth=3, 
+                                            label=f'Year-End Transitions ({len(circular_lines)})'))
+    
+    # Agregar elementos de años únicos
+    unique_years = sorted(set(labels))
+    for i, year in enumerate(unique_years[:5]):  # Máximo 5 años en leyenda
+        legend_elements.append(plt.Line2D([0], [0], marker='o', color=f'C{i}', linestyle='None', markersize=8, 
+                                        label=f'Year {year}'))
+    
+    if len(unique_years) > 5:
+        legend_elements.append(plt.Line2D([0], [0], marker='o', color='gray', linestyle='None', markersize=8, 
+                                        label=f'Other years ({len(unique_years)-5} more)'))
+    
+    ax.legend(handles=legend_elements, loc='upper right', fontsize=10)
+    ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    return fig
+
 def calculate_midpoint_lines(months, calls, peaks, valleys):
     """Calcular líneas de punto medio entre picos y valles consecutivos"""
     midpoint_lines = []
@@ -512,7 +602,7 @@ def main():
             st.markdown(f"*{_('Each month shows the percentage of total calls for that specific year')}*")
             
             # Explicación de colores
-            st.markdown("**🎨 {_('Color Legend:')}**")
+            st.markdown(f"**🎨 {_('Color Legend:')}**")
             st.markdown("- **🟢 Verde**: Month with highest calls in that year")
             st.markdown("- **🟡 Rosa**: Month with lowest calls in that year (excluding zeros)")
             st.markdown("- **⚪ Gris**: Months with no data (0 calls)")
@@ -575,6 +665,31 @@ def main():
                 with col3:
                     most_active_month = formatted_annual_table.mean().idxmax()
                     st.metric(_("Most Active Month"), most_active_month)
+                
+                # Gráfico de dispersión con líneas de punto medio
+                st.markdown("---")
+                st.markdown(f"### 🎯 {_('Annual Data vs Historical Transitions')}")
+                st.markdown(f"*{_('Scatter plot showing yearly data points with historical transition lines from main chart')}*")
+                
+                # Crear gráfico de dispersión
+                scatter_fig = create_scatter_with_midpoints(annual_table, midpoint_lines, company_id, selected_company_name)
+                if scatter_fig is not None:
+                    st.pyplot(scatter_fig)
+                    
+                    # Análisis de patrones
+                    st.markdown("#### 🔍 {_('Pattern Analysis')}")
+                    if midpoint_lines:
+                        st.markdown("**{_('Historical Transition Lines:')}**")
+                        for line in midpoint_lines:
+                            if line['is_circular']:
+                                st.write(f"• **Year-End Transition**: December → January ({line['color'].title()})")
+                            else:
+                                month_name = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][int(line['month'])-1]
+                                transition_type = "Valley→Peak" if line['color'] == 'green' else "Peak→Valley"
+                                st.write(f"• **Month {int(line['month'])} ({month_name})**: {transition_type} transition ({line['color'].title()})")
+                else:
+                    st.warning(_("No scatter plot data available"))
             else:
                 st.warning(_("No annual data available for this company"))
             
