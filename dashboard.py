@@ -671,16 +671,19 @@ def main():
                 st.markdown(f"### 🎯 {_('Annual Data vs Historical Transitions')}")
                 st.markdown(f"*{_('Scatter plot showing yearly data points with historical transition lines from main chart')}*")
                 
+                # Calcular líneas de punto medio para el gráfico de dispersión
+                scatter_midpoint_lines = calculate_midpoint_lines(months, calls, peaks, valleys)
+                
                 # Crear gráfico de dispersión
-                scatter_fig = create_scatter_with_midpoints(annual_table, midpoint_lines, company_id, selected_company_name)
+                scatter_fig = create_scatter_with_midpoints(annual_table, scatter_midpoint_lines, company_id, selected_company_name)
                 if scatter_fig is not None:
                     st.pyplot(scatter_fig)
                     
                     # Análisis de patrones
                     st.markdown("#### 🔍 {_('Pattern Analysis')}")
-                    if midpoint_lines:
+                    if scatter_midpoint_lines:
                         st.markdown("**{_('Historical Transition Lines:')}**")
-                        for line in midpoint_lines:
+                        for line in scatter_midpoint_lines:
                             if line['is_circular']:
                                 st.write(f"• **Year-End Transition**: December → January ({line['color'].title()})")
                             else:
