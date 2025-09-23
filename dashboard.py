@@ -37,20 +37,22 @@ st.set_page_config(
 # CONFIGURACIÓN DE GETTEXT
 # =============================================================================
 
-def setup_gettext():
-    """Configurar GETTEXT para traducciones"""
+def get_translation_function():
+    """Obtener función de traducción según idioma"""
     
     # Detectar idioma del navegador o parámetro URL
-    lang = st.query_params.get("lang", "en")
+    lang = st.query_params.get("lang", None)
     
-    # Si no hay parámetro, detectar idioma del sistema
-    if lang == "en" and "lang" not in st.query_params:
+    # Si no hay parámetro URL, detectar idioma del sistema
+    if lang is None:
         try:
             system_lang = locale.getdefaultlocale()[0][:2]
             if system_lang in ["es", "en"]:
                 lang = system_lang
+            else:
+                lang = "en"  # Fallback a inglés
         except:
-            lang = "en"
+            lang = "en"  # Fallback a inglés
     
     # Configurar GETTEXT
     try:
@@ -60,14 +62,14 @@ def setup_gettext():
             languages=[lang],
             fallback=True
         )
-        translation.install()
         return translation.gettext
     except Exception as e:
         st.warning(f"Translation error: {e}. Using English.")
         return lambda x: x
 
-# Configurar traducciones
-_ = setup_gettext()
+# Función de traducción (se llama en cada uso)
+def _(text):
+    return get_translation_function()(text)
 
 # =============================================================================
 # FUNCIONES BASE (copiadas de base_functions_notebook.py)
@@ -82,17 +84,19 @@ def get_calls_info():
         client = bigquery.Client()
         
         query = f"""
-           SELECT company_id AS `company_id`
-                , COUNT(DISTINCT(campaign_id)) AS `campaigns`
-                , COUNT(lead_call_customer_id) AS `customers`
-                , location_state AS `state`
-                , EXTRACT(YEAR FROM DATE(lead_call_created_on)) AS `year`
-                , EXTRACT(MONTH FROM DATE(lead_call_created_on)) AS `month`
-                , COUNT(lead_call_id) AS `calls`
-             FROM `pph-central.silver.vw_consolidated_call_lead_location`
-            WHERE DATE(lead_call_created_on) < DATE("2025-09-01")
-            GROUP BY company_id, location_state, EXTRACT(YEAR FROM DATE(lead_call_created_on)), EXTRACT(MONTH FROM DATE(lead_call_created_on))
-            ORDER BY company_id, location_state, EXTRACT(YEAR FROM DATE(lead_call_created_on)), EXTRACT(MONTH FROM DATE(lead_call_created_on))
+           SELECT c.company_id AS `company_id`
+                , c.company_name AS `company_name`
+                , COUNT(DISTINCT(cl.campaign_id)) AS `campaigns`
+                , COUNT(cl.lead_call_customer_id) AS `customers`
+                , cl.location_state AS `state`
+                , EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)) AS `year`
+                , EXTRACT(MONTH FROM DATE(cl.lead_call_created_on)) AS `month`
+                , COUNT(cl.lead_call_id) AS `calls`
+             FROM `pph-central.silver.vw_consolidated_call_lead_location` cl
+             JOIN `pph-central.settings.companies` c ON cl.company_id = c.company_id
+            WHERE DATE(cl.lead_call_created_on) < DATE("2025-09-01")
+            GROUP BY c.company_id, c.company_name, cl.location_state, EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)), EXTRACT(MONTH FROM DATE(cl.lead_call_created_on))
+            ORDER BY c.company_id, cl.location_state, EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)), EXTRACT(MONTH FROM DATE(cl.lead_call_created_on))
         """
         
         query_job = client.query(query)
@@ -155,7 +159,137 @@ def analyze_inflection_points_streamlit(calls_df, company_id):
     
     return months, calls, peaks, valleys, total_calls, monthly_calls
 
-def create_inflection_chart(months, calls, peaks, valleys, company_id):
+def calculate_annual_percentages(calls_df, company_id):
+    """
+    Calcula porcentajes mensuales por año para una compañía específica.
+    Retorna una tabla con años en filas y meses en columnas.
+    """
+    # Filtrar datos de la compañía
+    company_data = calls_df[calls_df['company_id'] == company_id].copy()
+    
+    if company_data.empty:
+        return None
+    
+    # Agrupar por año y mes, sumar llamadas
+    yearly_monthly = company_data.groupby(['year', 'month'])['calls'].sum().reset_index()
+    
+    # Crear tabla de porcentajes anuales
+    years = sorted(yearly_monthly['year'].unique())
+    months = range(1, 13)
+    
+    # Crear DataFrame para la tabla
+    annual_table = pd.DataFrame(index=years, columns=months)
+    annual_table.columns.name = 'Month'
+    annual_table.index.name = 'Year'
+    
+    # Calcular porcentajes para cada año
+    for year in years:
+        year_data = yearly_monthly[yearly_monthly['year'] == year]
+        year_total = year_data['calls'].sum()
+        
+        for month in months:
+            month_data = year_data[year_data['month'] == month]
+            if not month_data.empty:
+                month_calls = month_data['calls'].iloc[0]
+                percentage = (month_calls / year_total) * 100
+                annual_table.loc[year, month] = percentage
+            else:
+                annual_table.loc[year, month] = 0.0
+    
+    return annual_table
+
+def create_annual_percentage_table(annual_table, historical_percentages=None):
+    """
+    Crea una tabla formateada para mostrar porcentajes anuales.
+    Incluye una fila histórica para validación.
+    """
+    if annual_table is None:
+        return None
+    
+    # Crear tabla con nombres de meses
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    
+    # Crear DataFrame formateado
+    formatted_table = annual_table.copy()
+    formatted_table.columns = month_names
+    
+    # Formatear valores como porcentajes con 1 decimal
+    formatted_table = formatted_table.round(1)
+    
+    # Agregar fila histórica si se proporciona
+    if historical_percentages is not None:
+        # Crear fila histórica
+        historical_row = pd.Series(historical_percentages, index=month_names)
+        historical_row.name = 'Historical Total'
+        
+        # Agregar al DataFrame
+        formatted_table = pd.concat([formatted_table, historical_row.to_frame().T])
+    
+    return formatted_table
+
+def calculate_midpoint_lines(months, calls, peaks, valleys):
+    """Calcular líneas de punto medio entre picos y valles consecutivos"""
+    midpoint_lines = []
+    
+    # Combinar todos los puntos (picos y valles) y ordenarlos por mes
+    all_points = []
+    for peak in peaks:
+        all_points.append((months[peak], calls[peak], 'peak'))
+    for valley in valleys:
+        all_points.append((months[valley], calls[valley], 'valley'))
+    
+    # Ordenar por mes
+    all_points.sort(key=lambda x: x[0])
+    
+    # Calcular puntos medios entre puntos consecutivos
+    for i in range(len(all_points) - 1):
+        current_month, current_value, current_type = all_points[i]
+        next_month, next_value, next_type = all_points[i + 1]
+        
+        # Calcular punto medio
+        midpoint_month = (current_month + next_month) / 2
+        midpoint_value = (current_value + next_value) / 2
+        
+        # Determinar color: Verde si viene después de un valle, Rojo si viene después de un pico
+        color = 'green' if current_type == 'valley' else 'red'
+        
+        midpoint_lines.append({
+            'month': midpoint_month,
+            'value': midpoint_value,
+            'color': color,
+            'from_type': current_type,
+            'to_type': next_type,
+            'is_circular': False
+        })
+    
+    # Verificar secuencias que cruzan diciembre-enero (análisis circular)
+    if len(all_points) > 1:
+        first_point = all_points[0]
+        last_point = all_points[-1]
+        
+        # Si el primer punto está en enero (1) y el último en diciembre (12)
+        if first_point[0] == 1 and last_point[0] == 12:
+            # Calcular punto medio circular (diciembre -> enero)
+            # El punto medio está en 0.5 (entre diciembre y enero)
+            circular_midpoint = 0.5
+            circular_value = (first_point[1] + last_point[1]) / 2
+            
+            # Determinar color basado en el último punto (diciembre)
+            circular_color = 'green' if last_point[2] == 'valley' else 'red'
+            
+            midpoint_lines.append({
+                'month': circular_midpoint,
+                'value': circular_value,
+                'color': circular_color,
+                'from_type': last_point[2],  # diciembre
+                'to_type': first_point[2],   # enero
+                'is_circular': True
+            })
+    
+    return midpoint_lines
+
+def create_inflection_chart(months, calls, peaks, valleys, company_id, company_name):
     """
     Crea el gráfico de puntos de inflexión para Streamlit
     """
@@ -172,36 +306,74 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id):
     # Datos originales
     ax.plot(months, calls, 'o-', color='blue', linewidth=2, markersize=8, alpha=0.7)
     
-    # Marcar picos
-    if len(peaks) > 0:
-        ax.plot(months[peaks], calls[peaks], '^', color='red', markersize=12, 
-                label=f'Peaks ({len(peaks)})', markeredgecolor='darkred', markeredgewidth=2)
+    # Calcular líneas de punto medio
+    midpoint_lines = calculate_midpoint_lines(months, calls, peaks, valleys)
+    
+    # Dibujar líneas de punto medio
+    if midpoint_lines:
+        green_lines = [line for line in midpoint_lines if line['color'] == 'green' and not line['is_circular']]
+        red_lines = [line for line in midpoint_lines if line['color'] == 'red' and not line['is_circular']]
+        circular_lines = [line for line in midpoint_lines if line['is_circular']]
         
-        # Anotar picos
+        # Líneas verdes (después de valles)
+        if green_lines:
+            for line in green_lines:
+                ax.axvline(x=line['month'], color='green', linestyle='--', alpha=0.6, linewidth=2)
+        
+        # Líneas rojas (después de picos)
+        if red_lines:
+            for line in red_lines:
+                ax.axvline(x=line['month'], color='red', linestyle='--', alpha=0.6, linewidth=2)
+        
+        # Líneas circulares (diciembre-enero)
+        if circular_lines:
+            for line in circular_lines:
+                # Dibujar línea en enero (1) para transición diciembre->enero
+                ax.axvline(x=1, color=line['color'], linestyle='--', alpha=0.8, linewidth=3)
+                # Dibujar línea en diciembre (12) para transición diciembre->enero
+                ax.axvline(x=12, color=line['color'], linestyle='--', alpha=0.8, linewidth=3)
+        
+        # Agregar a la leyenda solo si hay líneas
+        if green_lines:
+            ax.axvline(x=green_lines[0]['month'], color='green', linestyle='--', alpha=0.6, 
+                      linewidth=2, label=f'Valley-to-Peak Midpoints ({len(green_lines)})')
+        if red_lines:
+            ax.axvline(x=red_lines[0]['month'], color='red', linestyle='--', alpha=0.6, 
+                      linewidth=2, label=f'Peak-to-Valley Midpoints ({len(red_lines)})')
+        if circular_lines:
+            ax.axvline(x=1, color=circular_lines[0]['color'], linestyle='--', alpha=0.8, 
+                      linewidth=3, label=f'Year-End Transition ({len(circular_lines)})')
+    
+    # Marcar picos (Verde - consistente con box plot)
+    if len(peaks) > 0:
+        ax.plot(months[peaks], calls[peaks], '^', color='green', markersize=12, 
+                label=f'Peaks ({len(peaks)})', markeredgecolor='darkgreen', markeredgewidth=2)
+        
+        # Anotar picos (DEBAJO de la curva)
         for peak in peaks:
             ax.annotate(f'Peak\nMonth {months[peak]}\n{calls[peak]:.1f}%', 
                         xy=(months[peak], calls[peak]), 
-                        xytext=(months[peak], calls[peak] + np.max(calls)*0.1),
-                        ha='center', va='bottom',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="red", alpha=0.7),
-                        arrowprops=dict(arrowstyle='->', color='red'))
-    
-    # Marcar valles
-    if len(valleys) > 0:
-        ax.plot(months[valleys], calls[valleys], 'v', color='green', markersize=12,
-                label=f'Valleys ({len(valleys)})', markeredgecolor='darkgreen', markeredgewidth=2)
-        
-        # Anotar valles
-        for valley in valleys:
-            ax.annotate(f'Valley\nMonth {months[valley]}\n{calls[valley]:.1f}%', 
-                        xy=(months[valley], calls[valley]), 
-                        xytext=(months[valley], calls[valley] - np.max(calls)*0.1),
+                        xytext=(months[peak], calls[peak] - np.max(calls)*0.1),
                         ha='center', va='top',
                         bbox=dict(boxstyle="round,pad=0.3", facecolor="green", alpha=0.7),
                         arrowprops=dict(arrowstyle='->', color='green'))
     
+    # Marcar valles (Rojo - consistente con box plot)
+    if len(valleys) > 0:
+        ax.plot(months[valleys], calls[valleys], 'v', color='red', markersize=12,
+                label=f'Valleys ({len(valleys)})', markeredgecolor='darkred', markeredgewidth=2)
+        
+        # Anotar valles (ENCIMA de la curva)
+        for valley in valleys:
+            ax.annotate(f'Valley\nMonth {months[valley]}\n{calls[valley]:.1f}%', 
+                        xy=(months[valley], calls[valley]), 
+                        xytext=(months[valley], calls[valley] + np.max(calls)*0.1),
+                        ha='center', va='bottom',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor="red", alpha=0.7),
+                        arrowprops=dict(arrowstyle='->', color='red'))
+    
     # Configurar gráfico
-    ax.set_title(f'Inflection Points - Company {company_id}\nPeaks and Valleys Analysis in Calls', 
+    ax.set_title(f'Inflection Points - {company_name} (ID: {company_id})\nPeaks and Valleys Analysis in Calls', 
                  fontsize=14, fontweight='bold')
     ax.set_xlabel('Month', fontsize=12)
     ax.set_ylabel('Percentage of Total Calls (%)', fontsize=12)
@@ -234,16 +406,20 @@ def main():
         st.error(_("Error loading data. Check BigQuery connection."))
         return
     
-    # Obtener lista de compañías disponibles
-    companies = sorted(calls_df['company_id'].unique())
+    # Obtener lista de compañías disponibles con nombres
+    companies_info = calls_df[['company_id', 'company_name']].drop_duplicates().sort_values('company_id')
+    companies_dict = dict(zip(companies_info['company_id'], companies_info['company_name']))
     
     # Selector de compañía
-    company_id = st.sidebar.selectbox(
+    selected_company_name = st.sidebar.selectbox(
         _("Select Company:"),
-        options=companies,
+        options=list(companies_dict.values()),
         index=0,
         help=_("Select the company to analyze its inflection points")
     )
+    
+    # Obtener el ID de la compañía seleccionada
+    company_id = [k for k, v in companies_dict.items() if v == selected_company_name][0]
     
     # Información de la compañía seleccionada
     company_data = calls_df[calls_df['company_id'] == company_id]
@@ -253,6 +429,7 @@ def main():
     
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"### {_('Company Information')}")
+    st.sidebar.write(f"**{_('Name:')}** {selected_company_name}")
     st.sidebar.write(f"**{_('ID:')}** {company_id}")
     st.sidebar.write(f"**{_('Total Calls:')}** {total_calls_company:,}")
     st.sidebar.write(f"**{_('Years:')}** {years_range}")
@@ -265,7 +442,7 @@ def main():
         
         if months is not None:
             # Crear gráfico
-            fig = create_inflection_chart(months, calls, peaks, valleys, company_id)
+            fig = create_inflection_chart(months, calls, peaks, valleys, company_id, selected_company_name)
             
             # Mostrar gráfico
             st.pyplot(fig)
@@ -327,6 +504,56 @@ def main():
             })
             
             st.dataframe(monthly_data, use_container_width=True)
+            
+            # Tabla de porcentajes anuales
+            st.markdown("---")
+            st.markdown(f"### 📊 {_('Annual Percentage Breakdown')}")
+            st.markdown(f"*{_('Each month shows the percentage of total calls for that specific year')}*")
+            st.markdown(f"**💡 {_('Note:')}** {_('The "Historical Total" row shows percentages from the main chart for validation')}")
+            
+            # Calcular tabla de porcentajes anuales
+            annual_table = calculate_annual_percentages(calls_df, company_id)
+            formatted_annual_table = create_annual_percentage_table(annual_table, calls)
+            
+            if formatted_annual_table is not None:
+                # Aplicar estilo a la tabla
+                def highlight_max_min(val):
+                    """Resaltar valores máximos y mínimos en cada fila"""
+                    if val == val.max():
+                        return 'background-color: #90EE90'  # Verde claro para máximo
+                    elif val == val.min():
+                        return 'background-color: #FFB6C1'  # Rosa claro para mínimo
+                    return ''
+                
+                def highlight_historical_row(row):
+                    """Resaltar la fila histórica con color diferente"""
+                    if row.name == 'Historical Total':
+                        return ['background-color: #E6E6FA' for _ in row]  # Lavanda para fila histórica
+                    return ['' for _ in row]
+                
+                # Aplicar estilos y mostrar tabla
+                styled_table = (formatted_annual_table
+                              .style
+                              .apply(highlight_max_min, axis=1)
+                              .apply(highlight_historical_row, axis=1))
+                st.dataframe(styled_table, use_container_width=True)
+                
+                # Estadísticas adicionales
+                st.markdown("#### 📈 {_('Annual Statistics')}")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric(_("Years Analyzed"), len(formatted_annual_table))
+                
+                with col2:
+                    avg_annual_variation = formatted_annual_table.max(axis=1).mean() - formatted_annual_table.min(axis=1).mean()
+                    st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.1f}%")
+                
+                with col3:
+                    most_active_month = formatted_annual_table.mean().idxmax()
+                    st.metric(_("Most Active Month"), most_active_month)
+            else:
+                st.warning(_("No annual data available for this company"))
             
         else:
             st.error(f"❌ {_('No data found for company')} {company_id}")
