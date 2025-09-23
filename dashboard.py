@@ -509,7 +509,8 @@ def main():
             st.markdown("---")
             st.markdown(f"### 📊 {_('Annual Percentage Breakdown')}")
             st.markdown(f"*{_('Each month shows the percentage of total calls for that specific year')}*")
-            st.markdown(f"**💡 {_('Note:')}** {_('The \"Historical Total\" row shows percentages from the main chart for validation')}")
+            note_text = _("The 'Historical Total' row shows percentages from the main chart for validation")
+            st.markdown(f"**💡 {_('Note:')}** {note_text}")
             
             # Calcular tabla de porcentajes anuales
             annual_table = calculate_annual_percentages(calls_df, company_id)

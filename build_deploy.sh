@@ -7,7 +7,7 @@
 set -e  # Salir si hay algún error
 
 # Configuración
-PROJECT_ID="pph-central"
+PROJECT_ID="platform-partners-qua"
 SERVICE_NAME="calls-analysis-dashboard"
 REGION="us-east1"
 SERVICE_ACCOUNT="streamlit-bigquery-sa@platform-partners-qua.iam.gserviceaccount.com"
