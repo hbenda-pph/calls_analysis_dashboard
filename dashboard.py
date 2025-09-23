@@ -510,6 +510,14 @@ def main():
             st.markdown("---")
             st.markdown(f"### 📊 {_('Annual Percentage Breakdown')}")
             st.markdown(f"*{_('Each month shows the percentage of total calls for that specific year')}*")
+            
+            # Explicación de colores
+            st.markdown("**🎨 {_('Color Legend:')}**")
+            st.markdown("- **🟢 Verde**: Month with highest calls in that year")
+            st.markdown("- **🟡 Rosa**: Month with lowest calls in that year (excluding zeros)")
+            st.markdown("- **⚪ Gris**: Months with no data (0 calls)")
+            st.markdown("- **🟣 Lavanda**: Historical validation row")
+            
             note_text = _("The 'Historical Total' row shows percentages from the main chart for validation")
             st.markdown(f"**💡 {_('Note:')}** {note_text}")
             
@@ -520,13 +528,18 @@ def main():
             if formatted_annual_table is not None:
                 # Aplicar estilo a la tabla
                 def highlight_max_min(row):
-                    """Resaltar valores máximos y mínimos en cada fila"""
+                    """Resaltar valores máximos y mínimos en cada fila (excluyendo ceros)"""
                     styles = []
+                    # Filtrar valores no nulos y mayores a 0
+                    non_zero_values = row[row > 0]
+                    
                     for i, val in enumerate(row):
-                        if val == row.max():
-                            styles.append('background-color: #90EE90')  # Verde claro para máximo
-                        elif val == row.min():
-                            styles.append('background-color: #FFB6C1')  # Rosa claro para mínimo
+                        if val == 0:
+                            styles.append('background-color: #D3D3D3')  # Gris para ceros
+                        elif len(non_zero_values) > 0 and val == non_zero_values.max():
+                            styles.append('background-color: #90EE90')  # Verde claro para máximo (no cero)
+                        elif len(non_zero_values) > 0 and val == non_zero_values.min():
+                            styles.append('background-color: #FFB6C1')  # Rosa claro para mínimo (no cero)
                         else:
                             styles.append('')
                     return styles
