@@ -229,70 +229,10 @@ def create_annual_percentage_table(annual_table, historical_percentages=None):
     
     return formatted_table
 
-def calculate_annual_midpoints(annual_table):
-    """
-    Calcula líneas de punto medio para cada año individualmente.
-    """
-    annual_midpoints = {}
-    
-    for year in annual_table.index:
-        year_data = annual_table.loc[year]
-        # Filtrar valores no cero
-        non_zero_data = year_data[year_data > 0]
-        
-        if len(non_zero_data) >= 2:  # Necesitamos al menos 2 puntos
-            # Encontrar picos y valles usando find_peaks
-            from scipy.signal import find_peaks
-            months = non_zero_data.index
-            values = non_zero_data.values
-            
-            # Encontrar picos (máximos locales)
-            peaks, _ = find_peaks(values, height=np.mean(values), distance=1)
-            # Encontrar valles (mínimos locales)
-            valleys, _ = find_peaks(-values, height=-np.mean(values), distance=1)
-            
-            # Convertir índices a meses reales
-            peak_months = [months[i] for i in peaks]
-            valley_months = [months[i] for i in valleys]
-            
-            # Combinar y ordenar todos los puntos
-            all_points = []
-            for month in peak_months:
-                all_points.append((month, year_data[month], 'peak'))
-            for month in valley_months:
-                all_points.append((month, year_data[month], 'valley'))
-            
-            # Ordenar por mes
-            all_points.sort(key=lambda x: x[0])
-            
-            # Calcular puntos medios
-            year_midpoints = []
-            for i in range(len(all_points) - 1):
-                current_month, current_value, current_type = all_points[i]
-                next_month, next_value, next_type = all_points[i + 1]
-                
-                midpoint_month = (current_month + next_month) / 2
-                midpoint_value = (current_value + next_value) / 2
-                
-                # Determinar color
-                color = 'green' if current_type == 'valley' else 'red'
-                
-                year_midpoints.append({
-                    'month': midpoint_month,
-                    'value': midpoint_value,
-                    'color': color,
-                    'from_type': current_type,
-                    'to_type': next_type
-                })
-            
-            annual_midpoints[year] = year_midpoints
-    
-    return annual_midpoints
-
 def create_scatter_with_midpoints(annual_table, midpoint_lines, company_id, company_name):
     """
-    Crea un gráfico de dispersión con líneas de punto medio anuales.
-    Muestra todos los datos anuales con las marcas específicas de cada año.
+    Crea un gráfico de dispersión con líneas de punto medio superpuestas.
+    Muestra todos los datos anuales con las marcas históricas.
     """
     if annual_table is None or annual_table.empty:
         return None
@@ -324,27 +264,19 @@ def create_scatter_with_midpoints(annual_table, midpoint_lines, company_id, comp
     # Crear gráfico de dispersión
     scatter = ax.scatter(months_scatter, values_scatter, c=colors, alpha=0.6, s=60, edgecolors='black', linewidth=0.5)
     
-    # Calcular y dibujar líneas de punto medio anuales
-    annual_midpoints = calculate_annual_midpoints(annual_table)
-    
-    for year, midpoints in annual_midpoints.items():
-        year_color = f'C{year % 10}'
-        for midpoint in midpoints:
-            # Dibujar línea vertical en el punto medio
-            ax.axvline(x=midpoint['month'], color=year_color, linestyle='--', 
-                      alpha=0.7, linewidth=2)
-    
-    # Dibujar líneas históricas globales (más gruesas)
+    # Dibujar líneas de punto medio del gráfico histórico
     if midpoint_lines:
         for line in midpoint_lines:
             if line['is_circular']:
-                ax.axvline(x=1, color='black', linestyle='-', alpha=0.8, linewidth=4)
-                ax.axvline(x=12, color='black', linestyle='-', alpha=0.8, linewidth=4)
+                # Líneas circulares: dibujar en enero y diciembre
+                ax.axvline(x=1, color=line['color'], linestyle='--', alpha=0.8, linewidth=3)
+                ax.axvline(x=12, color=line['color'], linestyle='--', alpha=0.8, linewidth=3)
             else:
-                ax.axvline(x=line['month'], color='black', linestyle='-', alpha=0.8, linewidth=3)
+                # Líneas normales
+                ax.axvline(x=line['month'], color=line['color'], linestyle='--', alpha=0.8, linewidth=2)
     
     # Configurar gráfico
-    ax.set_title(f'Annual Data vs Annual Midpoints - {company_name}\nScatter Plot with Year-Specific Transition Lines', 
+    ax.set_title(f'Annual Data vs Historical Midpoints - {company_name}\nScatter Plot with Historical Transition Lines', 
                  fontsize=14, fontweight='bold')
     ax.set_xlabel('Month', fontsize=12)
     ax.set_ylabel('Percentage of Total Calls (%)', fontsize=12)
@@ -355,16 +287,27 @@ def create_scatter_with_midpoints(annual_table, midpoint_lines, company_id, comp
     # Crear leyenda personalizada
     legend_elements = []
     
-    # Agregar elementos de líneas históricas (negras, gruesas)
+    # Agregar elementos de líneas históricas
     if midpoint_lines:
-        legend_elements.append(plt.Line2D([0], [0], color='black', linestyle='-', linewidth=3, 
-                                        label='Historical Transitions (All Years)'))
+        green_lines = [line for line in midpoint_lines if line['color'] == 'green']
+        red_lines = [line for line in midpoint_lines if line['color'] == 'red']
+        circular_lines = [line for line in midpoint_lines if line['is_circular']]
+        
+        if green_lines:
+            legend_elements.append(plt.Line2D([0], [0], color='green', linestyle='--', linewidth=2, 
+                                            label=f'Valley-to-Peak Transitions ({len(green_lines)})'))
+        if red_lines:
+            legend_elements.append(plt.Line2D([0], [0], color='red', linestyle='--', linewidth=2, 
+                                            label=f'Peak-to-Valley Transitions ({len(red_lines)})'))
+        if circular_lines:
+            legend_elements.append(plt.Line2D([0], [0], color=circular_lines[0]['color'], linestyle='--', linewidth=3, 
+                                            label=f'Year-End Transitions ({len(circular_lines)})'))
     
     # Agregar elementos de años únicos
     unique_years = sorted(set(labels))
     for i, year in enumerate(unique_years[:5]):  # Máximo 5 años en leyenda
         legend_elements.append(plt.Line2D([0], [0], marker='o', color=f'C{i}', linestyle='None', markersize=8, 
-                                        label=f'Year {year} (Data + Midpoints)'))
+                                        label=f'Year {year}'))
     
     if len(unique_years) > 5:
         legend_elements.append(plt.Line2D([0], [0], marker='o', color='gray', linestyle='None', markersize=8, 
@@ -374,7 +317,7 @@ def create_scatter_with_midpoints(annual_table, midpoint_lines, company_id, comp
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    return fig, annual_midpoints
+    return fig
 
 def calculate_midpoint_lines(months, calls, peaks, valleys):
     """Calcular líneas de punto medio entre picos y valles consecutivos"""
@@ -732,27 +675,14 @@ def main():
                 scatter_midpoint_lines = calculate_midpoint_lines(months, calls, peaks, valleys)
                 
                 # Crear gráfico de dispersión
-                scatter_result = create_scatter_with_midpoints(annual_table, scatter_midpoint_lines, company_id, selected_company_name)
-                if scatter_result is not None:
-                    scatter_fig, annual_midpoints = scatter_result
+                scatter_fig = create_scatter_with_midpoints(annual_table, scatter_midpoint_lines, company_id, selected_company_name)
+                if scatter_fig is not None:
                     st.pyplot(scatter_fig)
                     
-                    # Análisis de patrones anuales
-                    st.markdown("#### 🔍 {_('Annual Pattern Analysis')}")
-                    
-                    # Mostrar patrones por año
-                    for year, midpoints in annual_midpoints.items():
-                        if midpoints:  # Solo años con midpoints
-                            st.markdown(f"**{_('Year')} {year}:**")
-                            for midpoint in midpoints:
-                                month_name = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][int(midpoint['month'])-1]
-                                transition_type = "Valley→Peak" if midpoint['color'] == 'green' else "Peak→Valley"
-                                st.write(f"  • **Month {int(midpoint['month'])} ({month_name})**: {transition_type} transition")
-                    
-                    # Mostrar líneas históricas globales
-                    st.markdown("**{_('Global Historical Transitions:')}**")
+                    # Análisis de patrones
+                    st.markdown("#### 🔍 {_('Pattern Analysis')}")
                     if scatter_midpoint_lines:
+                        st.markdown("**{_('Historical Transition Lines:')}**")
                         for line in scatter_midpoint_lines:
                             if line['is_circular']:
                                 st.write(f"• **Year-End Transition**: December → January ({line['color'].title()})")
