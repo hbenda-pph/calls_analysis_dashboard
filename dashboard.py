@@ -95,6 +95,7 @@ def get_calls_info():
              FROM `pph-central.silver.vw_consolidated_call_lead_location` cl
              JOIN `pph-central.settings.companies` c ON cl.company_id = c.company_id
             WHERE DATE(cl.lead_call_created_on) < DATE("2025-09-01")
+              AND EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)) >= 2015
             GROUP BY c.company_id, c.company_name, cl.location_state, EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)), EXTRACT(MONTH FROM DATE(cl.lead_call_created_on))
             ORDER BY c.company_id, cl.location_state, EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)), EXTRACT(MONTH FROM DATE(cl.lead_call_created_on))
         """
@@ -214,8 +215,8 @@ def create_annual_percentage_table(annual_table, historical_percentages=None):
     formatted_table = annual_table.copy()
     formatted_table.columns = month_names
     
-    # Formatear valores como porcentajes con 1 decimal
-    formatted_table = formatted_table.round(1)
+    # Formatear valores como porcentajes con 2 decimales
+    formatted_table = formatted_table.round(2)
     
     # Agregar fila histórica si se proporciona
     if historical_percentages is not None:
@@ -540,11 +541,15 @@ def main():
                 styled_table = (formatted_annual_table
                               .style
                               .apply(highlight_max_min, axis=1)
-                              .apply(highlight_historical_row, axis=1))
+                              .apply(highlight_historical_row, axis=1)
+                              .set_table_styles([
+                                  {'selector': 'th', 'props': [('text-align', 'center')]},
+                                  {'selector': 'td', 'props': [('text-align', 'center')]}
+                              ]))
                 st.dataframe(styled_table, use_container_width=True)
                 
                 # Estadísticas adicionales
-                st.markdown("#### 📈 {_('Annual Statistics')}")
+                st.markdown(f"#### 📈 {_('Annual Statistics')}")
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
