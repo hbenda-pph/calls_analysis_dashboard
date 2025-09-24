@@ -659,7 +659,16 @@ def main():
                     st.metric(_("Years Analyzed"), len(formatted_annual_table))
                 
                 with col2:
-                    avg_annual_variation = formatted_annual_table.max(axis=1).mean() - formatted_annual_table.min(axis=1).mean()
+                    # Calcular variación por año y luego promediar
+                    annual_variations = []
+                    for year in formatted_annual_table.index:
+                        year_data = formatted_annual_table.loc[year]
+                        non_zero_data = year_data[year_data > 0]  # Excluir ceros
+                        if len(non_zero_data) > 0:
+                            year_variation = non_zero_data.max() - non_zero_data.min()
+                            annual_variations.append(year_variation)
+                    
+                    avg_annual_variation = np.mean(annual_variations) if annual_variations else 0
                     st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.1f}%")
                 
                 with col3:
