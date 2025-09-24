@@ -160,9 +160,10 @@ def analyze_inflection_points_streamlit(calls_df, company_id):
     
     return months, calls, peaks, valleys, total_calls, monthly_calls
 
-def calculate_annual_percentages(calls_df, company_id):
+def calculate_annual_data(calls_df, company_id, mode="percentages"):
     """
-    Calcula porcentajes mensuales por año para una compañía específica.
+    Calcula datos mensuales por año para una compañía específica.
+    Modo: "percentages" o "absolute"
     Retorna una tabla con años en filas y meses en columnas.
     """
     # Filtrar datos de la compañía
@@ -174,7 +175,7 @@ def calculate_annual_percentages(calls_df, company_id):
     # Agrupar por año y mes, sumar llamadas
     yearly_monthly = company_data.groupby(['year', 'month'])['calls'].sum().reset_index()
     
-    # Crear tabla de porcentajes anuales
+    # Crear tabla anual
     years = sorted(yearly_monthly['year'].unique())
     months = range(1, 13)
     
@@ -183,7 +184,7 @@ def calculate_annual_percentages(calls_df, company_id):
     annual_table.columns.name = 'Month'
     annual_table.index.name = 'Year'
     
-    # Calcular porcentajes para cada año
+    # Calcular datos para cada año
     for year in years:
         year_data = yearly_monthly[yearly_monthly['year'] == year]
         year_total = year_data['calls'].sum()
@@ -192,16 +193,20 @@ def calculate_annual_percentages(calls_df, company_id):
             month_data = year_data[year_data['month'] == month]
             if not month_data.empty:
                 month_calls = month_data['calls'].iloc[0]
-                percentage = (month_calls / year_total) * 100
-                annual_table.loc[year, month] = percentage
+                if mode == "percentages":
+                    value = (month_calls / year_total) * 100
+                else:  # absolute
+                    value = month_calls
+                annual_table.loc[year, month] = value
             else:
                 annual_table.loc[year, month] = 0.0
     
     return annual_table
 
-def create_annual_percentage_table(annual_table, historical_percentages=None):
+def create_annual_table(annual_table, historical_data=None, mode="percentages"):
     """
-    Crea una tabla formateada para mostrar porcentajes anuales.
+    Crea una tabla formateada para mostrar datos anuales.
+    Modo: "percentages" o "absolute"
     Incluye una fila histórica para validación.
     """
     if annual_table is None:
@@ -215,13 +220,16 @@ def create_annual_percentage_table(annual_table, historical_percentages=None):
     formatted_table = annual_table.copy()
     formatted_table.columns = month_names
     
-    # Formatear valores como porcentajes con 2 decimales
-    formatted_table = formatted_table.round(2)
+    # Formatear valores según el modo
+    if mode == "percentages":
+        formatted_table = formatted_table.round(2)
+    else:  # absolute
+        formatted_table = formatted_table.round(0).astype(int)
     
     # Agregar fila histórica si se proporciona
-    if historical_percentages is not None:
+    if historical_data is not None:
         # Crear fila histórica
-        historical_row = pd.Series(historical_percentages, index=month_names)
+        historical_row = pd.Series(historical_data, index=month_names)
         historical_row.name = 'Historical Total'
         
         # Agregar al DataFrame
@@ -512,6 +520,14 @@ def main():
     # Obtener el ID de la compañía seleccionada
     company_id = [k for k, v in companies_dict.items() if v == selected_company_name][0]
     
+    # Selector de modo de análisis
+    analysis_mode = st.sidebar.selectbox(
+        _("Analysis Mode:"),
+        options=["Percentages", "Absolute Numbers"],
+        index=0,
+        help=_("Choose between percentage analysis or absolute call numbers")
+    )
+    
     # Información de la compañía seleccionada
     company_data = calls_df[calls_df['company_id'] == company_id]
     total_calls_company = company_data['calls'].sum()
@@ -596,10 +612,14 @@ def main():
             
             st.dataframe(monthly_data, use_container_width=True)
             
-            # Tabla de porcentajes anuales
+            # Tabla de datos anuales
             st.markdown("---")
-            st.markdown(f"### 📊 {_('Annual Percentage Breakdown')}")
-            st.markdown(f"*{_('Each month shows the percentage of total calls for that specific year')}*")
+            if analysis_mode == "Percentages":
+                st.markdown(f"### 📊 {_('Annual Percentage Breakdown')}")
+                st.markdown(f"*{_('Each month shows the percentage of total calls for that specific year')}*")
+            else:
+                st.markdown(f"### 📊 {_('Annual Absolute Numbers Breakdown')}")
+                st.markdown(f"*{_('Each month shows the absolute number of calls for that specific year')}*")
             
             # Explicación de colores
             st.markdown(f"**🎨 {_('Color Legend:')}**")
@@ -608,12 +628,24 @@ def main():
             st.markdown("- **⚪ Gris**: Months with no data (0 calls)")
             st.markdown("- **🟣 Lavanda**: Historical validation row")
             
-            note_text = _("The 'Historical Total' row shows percentages from the main chart for validation")
+            if analysis_mode == "Percentages":
+                note_text = _("The 'Historical Total' row shows percentages from the main chart for validation")
+            else:
+                note_text = _("The 'Historical Total' row shows absolute numbers from the main chart for validation")
             st.markdown(f"**💡 {_('Note:')}** {note_text}")
             
-            # Calcular tabla de porcentajes anuales
-            annual_table = calculate_annual_percentages(calls_df, company_id)
-            formatted_annual_table = create_annual_percentage_table(annual_table, calls)
+            # Calcular tabla de datos anuales
+            mode_key = "percentages" if analysis_mode == "Percentages" else "absolute"
+            annual_table = calculate_annual_data(calls_df, company_id, mode_key)
+            
+            # Preparar datos históricos según el modo
+            if analysis_mode == "Percentages":
+                historical_data = calls  # Porcentajes históricos
+            else:
+                # Calcular números absolutos históricos
+                historical_data = (calls / 100) * total_calls  # Convertir % a números absolutos
+            
+            formatted_annual_table = create_annual_table(annual_table, historical_data, mode_key)
             
             if formatted_annual_table is not None:
                 # Aplicar estilo a la tabla
@@ -669,7 +701,11 @@ def main():
                             annual_variations.append(year_variation)
                     
                     avg_annual_variation = np.mean(annual_variations) if annual_variations else 0
-                    st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.1f}%")
+                    
+                    if analysis_mode == "Percentages":
+                        st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.1f}%")
+                    else:
+                        st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.0f} calls")
                 
                 with col3:
                     most_active_month = formatted_annual_table.mean().idxmax()
