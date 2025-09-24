@@ -388,7 +388,7 @@ def calculate_midpoint_lines(months, calls, peaks, valleys):
     
     return midpoint_lines
 
-def create_inflection_chart(months, calls, peaks, valleys, company_id, company_name):
+def create_inflection_chart(months, calls, peaks, valleys, company_id, company_name, ylabel_text="Percentage of Total Calls (%)", title_suffix="Peaks and Valleys Analysis", analysis_mode="Percentages"):
     """
     Crea el gráfico de puntos de inflexión para Streamlit
     """
@@ -450,7 +450,12 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
         
         # Anotar picos (DEBAJO de la curva)
         for peak in peaks:
-            ax.annotate(f'Peak\nMonth {months[peak]}\n{calls[peak]:.1f}%', 
+            if analysis_mode == "Absolute Numbers":
+                annotation_text = f'Peak\nMonth {months[peak]}\n{calls[peak]:.0f} calls'
+            else:
+                annotation_text = f'Peak\nMonth {months[peak]}\n{calls[peak]:.1f}%'
+            
+            ax.annotate(annotation_text, 
                         xy=(months[peak], calls[peak]), 
                         xytext=(months[peak], calls[peak] - np.max(calls)*0.1),
                         ha='center', va='top',
@@ -464,7 +469,12 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
         
         # Anotar valles (ENCIMA de la curva)
         for valley in valleys:
-            ax.annotate(f'Valley\nMonth {months[valley]}\n{calls[valley]:.1f}%', 
+            if analysis_mode == "Absolute Numbers":
+                annotation_text = f'Valley\nMonth {months[valley]}\n{calls[valley]:.0f} calls'
+            else:
+                annotation_text = f'Valley\nMonth {months[valley]}\n{calls[valley]:.1f}%'
+            
+            ax.annotate(annotation_text, 
                         xy=(months[valley], calls[valley]), 
                         xytext=(months[valley], calls[valley] + np.max(calls)*0.1),
                         ha='center', va='bottom',
@@ -472,10 +482,10 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
                         arrowprops=dict(arrowstyle='->', color='red'))
     
     # Configurar gráfico
-    ax.set_title(f'Inflection Points - {company_name} (ID: {company_id})\nPeaks and Valleys Analysis in Calls', 
+    ax.set_title(f'Inflection Points - {company_name} (ID: {company_id})\n{title_suffix} in Calls', 
                  fontsize=14, fontweight='bold')
     ax.set_xlabel('Month', fontsize=12)
-    ax.set_ylabel('Percentage of Total Calls (%)', fontsize=12)
+    ax.set_ylabel(ylabel_text, fontsize=12)
     ax.set_xticks(range(1, 13))
     ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
@@ -548,8 +558,19 @@ def main():
         months, calls, peaks, valleys, total_calls, monthly_calls = analyze_inflection_points_streamlit(calls_df, company_id)
         
         if months is not None:
+            # Ajustar datos según el modo seleccionado
+            if analysis_mode == "Absolute Numbers":
+                # Convertir porcentajes a números absolutos para el gráfico
+                calls_absolute = (calls / 100) * total_calls
+                ylabel_text = 'Number of Calls'
+                title_suffix = 'Calls Analysis'
+            else:
+                calls_absolute = calls
+                ylabel_text = 'Percentage of Total Calls (%)'
+                title_suffix = 'Percentage Analysis'
+            
             # Crear gráfico
-            fig = create_inflection_chart(months, calls, peaks, valleys, company_id, selected_company_name)
+            fig = create_inflection_chart(months, calls_absolute, peaks, valleys, company_id, selected_company_name, ylabel_text, title_suffix, analysis_mode)
             
             # Mostrar gráfico
             st.pyplot(fig)
@@ -599,16 +620,26 @@ def main():
             
             # Tabla de datos mensuales
             st.markdown("---")
-            st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
-            
-            monthly_data = pd.DataFrame({
-                _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
-                            _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
-                _('Calls'): monthly_calls.astype(int),
-                _('Percentage (%)'): calls.round(2),
-                _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
-                _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
-            })
+            if analysis_mode == "Percentages":
+                st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
+                monthly_data = pd.DataFrame({
+                    _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
+                                _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
+                    _('Calls'): monthly_calls.astype(int),
+                    _('Percentage (%)'): calls.round(2),
+                    _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
+                    _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
+                })
+            else:
+                st.markdown(f"### 📋 {_('Detailed Monthly Data - Absolute Numbers')}")
+                monthly_data = pd.DataFrame({
+                    _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
+                                _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
+                    _('Calls'): monthly_calls.astype(int),
+                    _('Percentage (%)'): calls.round(2),
+                    _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
+                    _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
+                })
             
             st.dataframe(monthly_data, use_container_width=True)
             
