@@ -138,7 +138,7 @@ def calculate_monthly_percentages(calls_df, company_id):
 # FUNCIÓN DE ANÁLISIS (adaptada del script original)
 # =============================================================================
 
-def analyze_inflection_points_streamlit(calls_df, company_id):
+def analyze_inflection_points_streamlit(calls_df, company_id, method="Original (find_peaks)"):
     """
     Analiza los puntos de inflexión para una compañía específica (versión Streamlit)
     """
@@ -152,13 +152,43 @@ def analyze_inflection_points_streamlit(calls_df, company_id):
     months = np.arange(1, 13)
     calls = monthly_percentages
     
-    # Encontrar picos (máximos locales)
-    peaks, _ = find_peaks(calls, height=np.mean(calls), distance=2)
-    
-    # Encontrar valles (mínimos locales)
-    valleys, _ = find_peaks(-calls, height=-np.mean(calls), distance=2)
+    # Aplicar método de detección seleccionado
+    if method == "Original (find_peaks)":
+        # Método original - más sensible
+        peaks, _ = find_peaks(calls, height=np.mean(calls), distance=2)
+        valleys, _ = find_peaks(-calls, height=-np.mean(calls), distance=2)
+        
+    elif method == "Mathematical Strict":
+        # Método matemático estricto - quartiles
+        peaks, valleys = detect_peaks_valleys_quartiles(calls)
+        
+    elif method == "Hybrid (3-4 months)":
+        # Método híbrido - distancia mínima de 3-4 meses
+        peaks, _ = find_peaks(calls, height=np.mean(calls), distance=3)
+        valleys, _ = find_peaks(-calls, height=-np.mean(calls), distance=3)
     
     return months, calls, peaks, valleys, total_calls, monthly_calls
+
+def detect_peaks_valleys_quartiles(calls):
+    """
+    Detecta picos y valles usando el método matemático estricto (quartiles)
+    Siempre retorna exactamente 2 picos y 2 valles
+    """
+    # Calcular quartiles
+    q1 = np.percentile(calls, 25)
+    q2 = np.percentile(calls, 50)  # mediana
+    q3 = np.percentile(calls, 75)
+    
+    # Encontrar los 2 valores más altos (picos) y los 2 más bajos (valles)
+    sorted_indices = np.argsort(calls)
+    
+    # 2 valles (valores más bajos)
+    valleys = sorted_indices[:2]
+    
+    # 2 picos (valores más altos)
+    peaks = sorted_indices[-2:]
+    
+    return peaks, valleys
 
 def calculate_annual_data(calls_df, company_id, mode="percentages"):
     """
@@ -539,6 +569,14 @@ def main():
         help=_("Choose between percentage analysis or absolute call numbers")
     )
     
+    # Selector de método de detección
+    detection_method = st.sidebar.selectbox(
+        _("Peak/Valley Detection Method:"),
+        options=["Original (find_peaks)", "Mathematical Strict", "Hybrid (3-4 months)"],
+        index=0,
+        help=_("Choose the method for detecting peaks and valleys")
+    )
+    
     # Información de la compañía seleccionada
     company_data = calls_df[calls_df['company_id'] == company_id]
     total_calls_company = company_data['calls'].sum()
@@ -556,7 +594,7 @@ def main():
     # Botón para generar análisis
     if st.sidebar.button(_("Generate Analysis"), type="primary"):
         # Realizar análisis
-        months, calls, peaks, valleys, total_calls, monthly_calls = analyze_inflection_points_streamlit(calls_df, company_id)
+        months, calls, peaks, valleys, total_calls, monthly_calls = analyze_inflection_points_streamlit(calls_df, company_id, detection_method)
         
         if months is not None:
             # Ajustar datos según el modo seleccionado
@@ -783,8 +821,12 @@ def main():
     **📊 {_('Methodology:')}**
     - {_('Data is grouped by month summing all calls from all years')}
     - {_('Monthly percentages of the total annual are calculated')}
-    - {_('Peaks and valleys are identified using SciPy find_peaks function')}
-    - {_('Parameters: minimum height = monthly average, minimum distance = 2 months')}
+    - {_('Peaks and valleys are identified using the selected detection method')}
+    
+    **🔍 {_('Detection Methods:')}**
+    - **{_('Original (find_peaks): Uses SciPy with height=mean, distance=2 months')}**
+    - **{_('Mathematical Strict: Always returns exactly 2 peaks and 2 valleys using quartiles')}**
+    - **{_('Hybrid (3-4 months): Uses SciPy with distance=3 months for better seasonal patterns')}**
     
     **🎯 {_('Interpretation:')}**
     - **{_('Peaks (🔺): Months with higher call concentration')}**
