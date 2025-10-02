@@ -224,6 +224,7 @@ def create_annual_table(annual_table, historical_data=None, mode="percentages"):
     if mode == "percentages":
         formatted_table = formatted_table.round(2)
     else:  # absolute
+        # Para números absolutos, redondear a enteros
         formatted_table = formatted_table.round(0).astype(int)
     
     # Agregar fila histórica si se proporciona
@@ -451,9 +452,9 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
         # Anotar picos (DEBAJO de la curva)
         for peak in peaks:
             if analysis_mode == "Absolute Numbers":
-                annotation_text = f'Peak\nMonth {months[peak]}\n{calls[peak]:.0f} calls'
+                annotation_text = f'Peak\nMonth {months[peak]}\n{int(calls[peak])} calls'
             else:
-                annotation_text = f'Peak\nMonth {months[peak]}\n{calls[peak]:.1f}%'
+                annotation_text = f'Peak\nMonth {months[peak]}\n{calls[peak]:.2f}%'
             
             ax.annotate(annotation_text, 
                         xy=(months[peak], calls[peak]), 
@@ -470,9 +471,9 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
         # Anotar valles (ENCIMA de la curva)
         for valley in valleys:
             if analysis_mode == "Absolute Numbers":
-                annotation_text = f'Valley\nMonth {months[valley]}\n{calls[valley]:.0f} calls'
+                annotation_text = f'Valley\nMonth {months[valley]}\n{int(calls[valley])} calls'
             else:
-                annotation_text = f'Valley\nMonth {months[valley]}\n{calls[valley]:.1f}%'
+                annotation_text = f'Valley\nMonth {months[valley]}\n{calls[valley]:.2f}%'
             
             ax.annotate(annotation_text, 
                         xy=(months[valley], calls[valley]), 
@@ -734,41 +735,41 @@ def main():
                     avg_annual_variation = np.mean(annual_variations) if annual_variations else 0
                     
                     if analysis_mode == "Percentages":
-                        st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.1f}%")
+                        st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.2f}%")
                     else:
-                        st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.0f} calls")
+                        st.metric(_("Avg Annual Variation"), f"{int(avg_annual_variation)} calls")
                 
                 with col3:
                     most_active_month = formatted_annual_table.mean().idxmax()
                     st.metric(_("Most Active Month"), most_active_month)
                 
-                # Gráfico de dispersión con líneas de punto medio
-                st.markdown("---")
-                st.markdown(f"### 🎯 {_('Annual Data vs Historical Transitions')}")
-                st.markdown(f"*{_('Scatter plot showing yearly data points with historical transition lines from main chart')}*")
+                # Gráfico de dispersión con líneas de punto medio (COMENTADO TEMPORALMENTE)
+                # st.markdown("---")
+                # st.markdown(f"### 🎯 {_('Annual Data vs Historical Transitions')}")
+                # st.markdown(f"*{_('Scatter plot showing yearly data points with historical transition lines from main chart')}*")
                 
-                # Calcular líneas de punto medio para el gráfico de dispersión
-                scatter_midpoint_lines = calculate_midpoint_lines(months, calls, peaks, valleys)
+                # # Calcular líneas de punto medio para el gráfico de dispersión
+                # scatter_midpoint_lines = calculate_midpoint_lines(months, calls, peaks, valleys)
                 
-                # Crear gráfico de dispersión
-                scatter_fig = create_scatter_with_midpoints(annual_table, scatter_midpoint_lines, company_id, selected_company_name)
-                if scatter_fig is not None:
-                    st.pyplot(scatter_fig)
+                # # Crear gráfico de dispersión
+                # scatter_fig = create_scatter_with_midpoints(annual_table, scatter_midpoint_lines, company_id, selected_company_name)
+                # if scatter_fig is not None:
+                #     st.pyplot(scatter_fig)
                     
-                    # Análisis de patrones
-                    st.markdown("#### 🔍 {_('Pattern Analysis')}")
-                    if scatter_midpoint_lines:
-                        st.markdown("**{_('Historical Transition Lines:')}**")
-                        for line in scatter_midpoint_lines:
-                            if line['is_circular']:
-                                st.write(f"• **Year-End Transition**: December → January ({line['color'].title()})")
-                            else:
-                                month_name = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][int(line['month'])-1]
-                                transition_type = "Valley→Peak" if line['color'] == 'green' else "Peak→Valley"
-                                st.write(f"• **Month {int(line['month'])} ({month_name})**: {transition_type} transition ({line['color'].title()})")
-                else:
-                    st.warning(_("No scatter plot data available"))
+                #     # Análisis de patrones
+                #     st.markdown("#### 🔍 {_('Pattern Analysis')}")
+                #     if scatter_midpoint_lines:
+                #         st.markdown("**{_('Historical Transition Lines:')}**")
+                #         for line in scatter_midpoint_lines:
+                #             if line['is_circular']:
+                #                 st.write(f"• **Year-End Transition**: December → January ({line['color'].title()})")
+                #             else:
+                #                 month_name = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                #                             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][int(line['month'])-1]
+                #                 transition_type = "Valley→Peak" if line['color'] == 'green' else "Peak→Valley"
+                #                 st.write(f"• **Month {int(line['month'])} ({month_name})**: {transition_type} transition ({line['color'].title()})")
+                # else:
+                #     st.warning(_("No scatter plot data available"))
             else:
                 st.warning(_("No annual data available for this company"))
             
