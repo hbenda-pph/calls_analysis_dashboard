@@ -155,7 +155,7 @@ def analyze_inflection_points_streamlit(calls_df, company_id, method="Original (
     # Aplicar método de detección seleccionado
     if method == "Original (find_peaks)":
         # Método original - más sensible
-    peaks, _ = find_peaks(calls, height=np.mean(calls), distance=2)
+        peaks, _ = find_peaks(calls, height=np.mean(calls), distance=2)
         valleys, _ = find_peaks(-calls, height=-np.mean(calls), distance=2)
         
     elif method == "Mathematical Strict":
