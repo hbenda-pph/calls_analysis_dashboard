@@ -153,17 +153,17 @@ def analyze_inflection_points_streamlit(calls_df, company_id, method="Original (
     calls = monthly_percentages
     
     # Aplicar método de detección seleccionado
+    # Método original - más sensible
     if method == "Original (find_peaks)":
-        # Método original - más sensible
         peaks, _ = find_peaks(calls, height=np.mean(calls), distance=2)
         valleys, _ = find_peaks(-calls, height=-np.mean(calls), distance=2)
-        
+
+    # Método matemático estricto - quartiles        
     elif method == "Mathematical Strict":
-        # Método matemático estricto - quartiles
         peaks, valleys = detect_peaks_valleys_quartiles(calls)
-        
+
+    # Método híbrido - distancia mínima de 3-4 meses
     elif method == "Hybrid (3-4 months)":
-        # Método híbrido - distancia mínima de 3-4 meses
         peaks, _ = find_peaks(calls, height=np.mean(calls), distance=3)
         valleys, _ = find_peaks(-calls, height=-np.mean(calls), distance=3)
     
@@ -861,7 +861,7 @@ def main():
             # Tabla de datos mensuales
             st.markdown("---")
             if analysis_mode == "Percentages":
-            st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
+                st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
                 monthly_data = pd.DataFrame({
                     _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
                                 _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
@@ -872,14 +872,14 @@ def main():
                 })
             else:
                 st.markdown(f"### 📋 {_('Detailed Monthly Data - Absolute Numbers')}")
-            monthly_data = pd.DataFrame({
-                _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
-                            _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
-                _('Calls'): monthly_calls.astype(int),
-                _('Percentage (%)'): calls.round(2),
-                _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
-                _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
-            })
+                monthly_data = pd.DataFrame({
+                    _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
+                                _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
+                    _('Calls'): monthly_calls.astype(int),
+                    _('Percentage (%)'): calls.round(2),
+                    _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
+                    _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
+                })
             
             st.dataframe(monthly_data, use_container_width=True)
             
