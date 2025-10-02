@@ -663,7 +663,7 @@ def main():
             # Tabla de datos mensuales
             st.markdown("---")
             if analysis_mode == "Percentages":
-            st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
+                st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
                 monthly_data = pd.DataFrame({
                     _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
                                 _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
@@ -674,14 +674,14 @@ def main():
                 })
             else:
                 st.markdown(f"### 📋 {_('Detailed Monthly Data - Absolute Numbers')}")
-            monthly_data = pd.DataFrame({
-                _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
-                            _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
-                _('Calls'): monthly_calls.astype(int),
-                _('Percentage (%)'): calls.round(2),
-                _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
-                _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
-            })
+                monthly_data = pd.DataFrame({
+                    _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
+                                _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
+                    _('Calls'): monthly_calls.astype(int),
+                    _('Percentage (%)'): calls.round(2),
+                    _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
+                    _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
+                })
             
             st.dataframe(monthly_data, use_container_width=True)
             
