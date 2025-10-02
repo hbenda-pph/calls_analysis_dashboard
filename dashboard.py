@@ -618,34 +618,34 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
         red_lines = [line for line in midpoint_lines if line['color'] == 'red' and not line['is_circular']]
         circular_lines = [line for line in midpoint_lines if line['is_circular']]
         
-        # Líneas verdes (después de valles) - Estilo gradiente
+        # Líneas verdes (después de valles) - Estilo difuminado
         if green_lines:
             for line in green_lines:
-                ax.axvline(x=line['month'], color='green', linestyle='-.', alpha=0.5, linewidth=2)
+                ax.axvline(x=line['month'], color='green', linestyle='--', alpha=0.4, linewidth=1.5)
         
-        # Líneas rojas (después de picos) - Estilo gradiente
+        # Líneas rojas (después de picos) - Estilo difuminado
         if red_lines:
             for line in red_lines:
-                ax.axvline(x=line['month'], color='red', linestyle='-.', alpha=0.5, linewidth=2)
+                ax.axvline(x=line['month'], color='red', linestyle='--', alpha=0.4, linewidth=1.5)
         
-        # Líneas circulares (diciembre-enero) - Estilo gradiente
+        # Líneas circulares (diciembre-enero) - Estilo difuminado
         if circular_lines:
             for line in circular_lines:
                 # Dibujar línea en enero (1) para transición diciembre->enero
-                ax.axvline(x=1, color=line['color'], linestyle='-.', alpha=0.6, linewidth=2.5)
+                ax.axvline(x=1, color=line['color'], linestyle='--', alpha=0.5, linewidth=2)
                 # Dibujar línea en diciembre (12) para transición diciembre->enero
-                ax.axvline(x=12, color=line['color'], linestyle='-.', alpha=0.6, linewidth=2.5)
+                ax.axvline(x=12, color=line['color'], linestyle='--', alpha=0.5, linewidth=2)
         
         # Agregar a la leyenda solo si hay líneas (simplificada)
         if green_lines:
-            ax.axvline(x=green_lines[0]['month'], color='green', linestyle='-.', alpha=0.5, 
-                      linewidth=2, label=f'Growth Periods ({len(green_lines)})')
+            ax.axvline(x=green_lines[0]['month'], color='green', linestyle='--', alpha=0.4, 
+                      linewidth=1.5, label=f'Growth Periods ({len(green_lines)})')
         if red_lines:
-            ax.axvline(x=red_lines[0]['month'], color='red', linestyle='-.', alpha=0.5, 
-                      linewidth=2, label=f'Decline Periods ({len(red_lines)})')
+            ax.axvline(x=red_lines[0]['month'], color='red', linestyle='--', alpha=0.4, 
+                      linewidth=1.5, label=f'Decline Periods ({len(red_lines)})')
         if circular_lines:
-            ax.axvline(x=1, color=circular_lines[0]['color'], linestyle='-.', alpha=0.6, 
-                      linewidth=2.5, label=f'Year-End Transition ({len(circular_lines)})')
+            ax.axvline(x=1, color=circular_lines[0]['color'], linestyle='--', alpha=0.5, 
+                      linewidth=2, label=f'Year-End Transition ({len(circular_lines)})')
     
     # Marcar picos y valles (sin anotaciones para simplificar)
     if len(peaks) > 0:
@@ -861,7 +861,7 @@ def main():
             # Tabla de datos mensuales
             st.markdown("---")
             if analysis_mode == "Percentages":
-                st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
+            st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
                 monthly_data = pd.DataFrame({
                     _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
                                 _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
@@ -872,14 +872,14 @@ def main():
                 })
             else:
                 st.markdown(f"### 📋 {_('Detailed Monthly Data - Absolute Numbers')}")
-                monthly_data = pd.DataFrame({
-                    _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
-                                _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
-                    _('Calls'): monthly_calls.astype(int),
-                    _('Percentage (%)'): calls.round(2),
-                    _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
-                    _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
-                })
+            monthly_data = pd.DataFrame({
+                _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
+                            _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
+                _('Calls'): monthly_calls.astype(int),
+                _('Percentage (%)'): calls.round(2),
+                _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
+                _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
+            })
             
             st.dataframe(monthly_data, use_container_width=True)
             
