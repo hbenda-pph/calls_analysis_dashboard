@@ -519,7 +519,7 @@ def calculate_midpoint_lines(months, calls, peaks, valleys):
         midpoint_month = (current_month + next_month) / 2
         midpoint_value = (current_value + next_value) / 2
         
-        # Determinar color: Verde si viene después de un valle, Rojo si viene después de un pico
+        # Determinar color: Verde si viene después de un valle (subiendo), Rojo si viene después de un pico (bajando)
         color = 'green' if current_type == 'valley' else 'red'
         
         midpoint_lines.append({
@@ -781,18 +781,18 @@ def main():
             
             # Mostrar issues si los hay
             if pattern_analysis['issues']:
-                st.markdown("#### ⚠️ {_('Issues Detected:')}")
+                st.markdown(f"#### ⚠️ {_('Issues Detected:')}")
                 for issue in pattern_analysis['issues']:
                     st.warning(f"• {issue}")
             
             # Mostrar recomendaciones
             if pattern_analysis['recommendations']:
-                st.markdown("#### 💡 {_('Recommendations:')}")
+                st.markdown(f"#### 💡 {_('Recommendations:')}")
                 for rec in pattern_analysis['recommendations']:
                     st.info(f"• {rec}")
             
             # Mostrar marcas optimizadas
-            st.markdown("#### 🎯 {_('Optimized Midpoint Marks:')}")
+            st.markdown(f"#### 🎯 {_('Optimized Midpoint Marks:')}")
             optimized_marks = optimize_midpoint_marks(pattern_analysis, months, calls_absolute, peaks, valleys)
             
             if optimized_marks:
