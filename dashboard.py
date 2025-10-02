@@ -497,61 +497,96 @@ def create_scatter_with_midpoints(annual_table, midpoint_lines, company_id, comp
     return fig
 
 def calculate_midpoint_lines(months, calls, peaks, valleys):
-    """Calcular líneas de punto medio entre picos y valles consecutivos"""
+    """Calcular líneas de punto medio entre picos y valles con secuencia lógica"""
     midpoint_lines = []
     
-    # Combinar todos los puntos (picos y valles) y ordenarlos por mes
+    # Combinar todos los puntos con su posición y tipo
     all_points = []
     for peak in peaks:
-        all_points.append((months[peak], calls[peak], 'peak'))
+        all_points.append({
+            'month': months[peak], 
+            'value': calls[peak], 
+            'type': 'peak',
+            'index': peak
+        })
     for valley in valleys:
-        all_points.append((months[valley], calls[valley], 'valley'))
-    
-    # Ordenar por mes
-    all_points.sort(key=lambda x: x[0])
-    
-    # Calcular puntos medios entre puntos consecutivos
-    for i in range(len(all_points) - 1):
-        current_month, current_value, current_type = all_points[i]
-        next_month, next_value, next_type = all_points[i + 1]
-        
-        # Calcular punto medio
-        midpoint_month = (current_month + next_month) / 2
-        midpoint_value = (current_value + next_value) / 2
-        
-        # Determinar color: Verde si viene después de un valle (subiendo), Rojo si viene después de un pico (bajando)
-        color = 'green' if current_type == 'valley' else 'red'
-        
-        midpoint_lines.append({
-            'month': midpoint_month,
-            'value': midpoint_value,
-            'color': color,
-            'from_type': current_type,
-            'to_type': next_type,
-            'is_circular': False
+        all_points.append({
+            'month': months[valley], 
+            'value': calls[valley], 
+            'type': 'valley',
+            'index': valley
         })
     
-    # Verificar secuencias que cruzan diciembre-enero (análisis circular)
+    # Ordenar por mes
+    all_points.sort(key=lambda x: x['month'])
+    
+    # Asignar posiciones lógicas (v1, p1, v2, p2, etc.)
+    valley_count = 0
+    peak_count = 0
+    
+    for point in all_points:
+        if point['type'] == 'valley':
+            valley_count += 1
+            point['position'] = f'v{valley_count}'
+        else:  # peak
+            peak_count += 1
+            point['position'] = f'p{peak_count}'
+    
+    # Calcular marcas solo entre secuencias válidas
+    for i in range(len(all_points) - 1):
+        current = all_points[i]
+        next_point = all_points[i + 1]
+        
+        # Solo marcar entre valley→peak (verde) o peak→valley (rojo)
+        if (current['type'] == 'valley' and next_point['type'] == 'peak') or \
+           (current['type'] == 'peak' and next_point['type'] == 'valley'):
+            
+            # Calcular punto medio
+            midpoint_month = (current['month'] + next_point['month']) / 2
+            midpoint_value = (current['value'] + next_point['value']) / 2
+            
+            # Determinar color basado en la secuencia
+            if current['type'] == 'valley' and next_point['type'] == 'peak':
+                color = 'green'  # Subiendo: valley→peak
+                transition_type = f"{current['position']}→{next_point['position']}"
+            else:
+                color = 'red'    # Bajando: peak→valley
+                transition_type = f"{current['position']}→{next_point['position']}"
+            
+            midpoint_lines.append({
+                'month': midpoint_month,
+                'value': midpoint_value,
+                'color': color,
+                'from_position': current['position'],
+                'to_position': next_point['position'],
+                'transition_type': transition_type,
+                'is_circular': False
+            })
+    
+    # Verificar secuencia circular (diciembre→enero) solo si es válida
     if len(all_points) > 1:
         first_point = all_points[0]
         last_point = all_points[-1]
         
-        # Si el primer punto está en enero (1) y el último en diciembre (12)
-        if first_point[0] == 1 and last_point[0] == 12:
-            # Calcular punto medio circular (diciembre -> enero)
-            # El punto medio está en 0.5 (entre diciembre y enero)
-            circular_midpoint = 0.5
-            circular_value = (first_point[1] + last_point[1]) / 2
+        # Solo si hay una secuencia válida (valley→peak o peak→valley)
+        if (last_point['type'] == 'valley' and first_point['type'] == 'peak') or \
+           (last_point['type'] == 'peak' and first_point['type'] == 'valley'):
             
-            # Determinar color basado en el último punto (diciembre)
-            circular_color = 'green' if last_point[2] == 'valley' else 'red'
+            circular_midpoint = 0.5
+            circular_value = (last_point['value'] + first_point['value']) / 2
+            
+            if last_point['type'] == 'valley' and first_point['type'] == 'peak':
+                color = 'green'  # Subiendo: valley→peak
+            else:
+                color = 'red'    # Bajando: peak→valley
             
             midpoint_lines.append({
                 'month': circular_midpoint,
                 'value': circular_value,
-                'color': circular_color,
-                'from_type': last_point[2],  # diciembre
-                'to_type': first_point[2],   # enero
+                'color': color,
+                'from_position': last_point['position'],
+                'to_position': first_point['position'],
+                'transition_type': f"{last_point['position']}→{first_point['position']}",
                 'is_circular': True
             })
     
@@ -586,69 +621,40 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
         # Líneas verdes (después de valles)
         if green_lines:
             for line in green_lines:
-                ax.axvline(x=line['month'], color='green', linestyle='--', alpha=0.6, linewidth=2)
+                ax.axvline(x=line['month'], color='green', linestyle='-', alpha=0.8, linewidth=3)
         
         # Líneas rojas (después de picos)
         if red_lines:
             for line in red_lines:
-                ax.axvline(x=line['month'], color='red', linestyle='--', alpha=0.6, linewidth=2)
+                ax.axvline(x=line['month'], color='red', linestyle='-', alpha=0.8, linewidth=3)
         
         # Líneas circulares (diciembre-enero)
         if circular_lines:
             for line in circular_lines:
                 # Dibujar línea en enero (1) para transición diciembre->enero
-                ax.axvline(x=1, color=line['color'], linestyle='--', alpha=0.8, linewidth=3)
+                ax.axvline(x=1, color=line['color'], linestyle='-', alpha=0.8, linewidth=4)
                 # Dibujar línea en diciembre (12) para transición diciembre->enero
-                ax.axvline(x=12, color=line['color'], linestyle='--', alpha=0.8, linewidth=3)
+                ax.axvline(x=12, color=line['color'], linestyle='-', alpha=0.8, linewidth=4)
         
-        # Agregar a la leyenda solo si hay líneas
+        # Agregar a la leyenda solo si hay líneas (simplificada)
         if green_lines:
-            ax.axvline(x=green_lines[0]['month'], color='green', linestyle='--', alpha=0.6, 
-                      linewidth=2, label=f'Valley-to-Peak Midpoints ({len(green_lines)})')
+            ax.axvline(x=green_lines[0]['month'], color='green', linestyle='-', alpha=0.8, 
+                      linewidth=3, label=f'Growth Periods ({len(green_lines)})')
         if red_lines:
-            ax.axvline(x=red_lines[0]['month'], color='red', linestyle='--', alpha=0.6, 
-                      linewidth=2, label=f'Peak-to-Valley Midpoints ({len(red_lines)})')
+            ax.axvline(x=red_lines[0]['month'], color='red', linestyle='-', alpha=0.8, 
+                      linewidth=3, label=f'Decline Periods ({len(red_lines)})')
         if circular_lines:
-            ax.axvline(x=1, color=circular_lines[0]['color'], linestyle='--', alpha=0.8, 
-                      linewidth=3, label=f'Year-End Transition ({len(circular_lines)})')
+            ax.axvline(x=1, color=circular_lines[0]['color'], linestyle='-', alpha=0.8, 
+                      linewidth=4, label=f'Year-End Transition ({len(circular_lines)})')
     
-    # Marcar picos (Verde - consistente con box plot)
+    # Marcar picos y valles (sin anotaciones para simplificar)
     if len(peaks) > 0:
-        ax.plot(months[peaks], calls[peaks], '^', color='green', markersize=12, 
-                label=f'Peaks ({len(peaks)})', markeredgecolor='darkgreen', markeredgewidth=2)
-        
-        # Anotar picos (DEBAJO de la curva)
-        for peak in peaks:
-            if analysis_mode == "Absolute Numbers":
-                annotation_text = f'Peak\nMonth {months[peak]}\n{int(calls[peak])} calls'
-            else:
-                annotation_text = f'Peak\nMonth {months[peak]}\n{calls[peak]:.2f}%'
-            
-            ax.annotate(annotation_text, 
-                        xy=(months[peak], calls[peak]), 
-                        xytext=(months[peak], calls[peak] - np.max(calls)*0.1),
-                        ha='center', va='top',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="green", alpha=0.7),
-                        arrowprops=dict(arrowstyle='->', color='green'))
+        ax.plot(months[peaks], calls[peaks], '^', color='green', markersize=8, 
+                label=f'Peaks ({len(peaks)})', markeredgecolor='darkgreen', markeredgewidth=1)
     
-    # Marcar valles (Rojo - consistente con box plot)
     if len(valleys) > 0:
-        ax.plot(months[valleys], calls[valleys], 'v', color='red', markersize=12,
-                label=f'Valleys ({len(valleys)})', markeredgecolor='darkred', markeredgewidth=2)
-        
-        # Anotar valles (ENCIMA de la curva)
-        for valley in valleys:
-            if analysis_mode == "Absolute Numbers":
-                annotation_text = f'Valley\nMonth {months[valley]}\n{int(calls[valley])} calls'
-            else:
-                annotation_text = f'Valley\nMonth {months[valley]}\n{calls[valley]:.2f}%'
-            
-            ax.annotate(annotation_text, 
-                        xy=(months[valley], calls[valley]), 
-                        xytext=(months[valley], calls[valley] + np.max(calls)*0.1),
-                        ha='center', va='bottom',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="red", alpha=0.7),
-                        arrowprops=dict(arrowstyle='->', color='red'))
+        ax.plot(months[valleys], calls[valleys], 'v', color='red', markersize=8,
+                label=f'Valleys ({len(valleys)})', markeredgecolor='darkred', markeredgewidth=1)
     
     # Configurar gráfico
     ax.set_title(f'Inflection Points - {company_name} (ID: {company_id})\n{title_suffix} in Calls', 
