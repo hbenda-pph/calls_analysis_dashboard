@@ -155,7 +155,7 @@ def analyze_inflection_points_streamlit(calls_df, company_id, method="Original (
     # Aplicar método de detección seleccionado
     if method == "Original (find_peaks)":
         # Método original - más sensible
-    peaks, _ = find_peaks(calls, height=np.mean(calls), distance=2)
+        peaks, _ = find_peaks(calls, height=np.mean(calls), distance=2)
         valleys, _ = find_peaks(-calls, height=-np.mean(calls), distance=2)
         
     elif method == "Mathematical Strict":
@@ -618,33 +618,33 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
         red_lines = [line for line in midpoint_lines if line['color'] == 'red' and not line['is_circular']]
         circular_lines = [line for line in midpoint_lines if line['is_circular']]
         
-        # Líneas verdes (después de valles) - Estilo suave
+        # Líneas verdes (después de valles) - Estilo gradiente
         if green_lines:
             for line in green_lines:
-                ax.axvline(x=line['month'], color='green', linestyle=':', alpha=0.6, linewidth=2)
+                ax.axvline(x=line['month'], color='green', linestyle='-.', alpha=0.5, linewidth=2)
         
-        # Líneas rojas (después de picos) - Estilo suave
+        # Líneas rojas (después de picos) - Estilo gradiente
         if red_lines:
             for line in red_lines:
-                ax.axvline(x=line['month'], color='red', linestyle=':', alpha=0.6, linewidth=2)
+                ax.axvline(x=line['month'], color='red', linestyle='-.', alpha=0.5, linewidth=2)
         
-        # Líneas circulares (diciembre-enero) - Estilo suave
+        # Líneas circulares (diciembre-enero) - Estilo gradiente
         if circular_lines:
             for line in circular_lines:
                 # Dibujar línea en enero (1) para transición diciembre->enero
-                ax.axvline(x=1, color=line['color'], linestyle=':', alpha=0.7, linewidth=2.5)
+                ax.axvline(x=1, color=line['color'], linestyle='-.', alpha=0.6, linewidth=2.5)
                 # Dibujar línea en diciembre (12) para transición diciembre->enero
-                ax.axvline(x=12, color=line['color'], linestyle=':', alpha=0.7, linewidth=2.5)
+                ax.axvline(x=12, color=line['color'], linestyle='-.', alpha=0.6, linewidth=2.5)
         
         # Agregar a la leyenda solo si hay líneas (simplificada)
         if green_lines:
-            ax.axvline(x=green_lines[0]['month'], color='green', linestyle=':', alpha=0.6, 
+            ax.axvline(x=green_lines[0]['month'], color='green', linestyle='-.', alpha=0.5, 
                       linewidth=2, label=f'Growth Periods ({len(green_lines)})')
         if red_lines:
-            ax.axvline(x=red_lines[0]['month'], color='red', linestyle=':', alpha=0.6, 
+            ax.axvline(x=red_lines[0]['month'], color='red', linestyle='-.', alpha=0.5, 
                       linewidth=2, label=f'Decline Periods ({len(red_lines)})')
         if circular_lines:
-            ax.axvline(x=1, color=circular_lines[0]['color'], linestyle=':', alpha=0.7, 
+            ax.axvline(x=1, color=circular_lines[0]['color'], linestyle='-.', alpha=0.6, 
                       linewidth=2.5, label=f'Year-End Transition ({len(circular_lines)})')
     
     # Marcar picos y valles (sin anotaciones para simplificar)
