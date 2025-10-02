@@ -190,6 +190,144 @@ def detect_peaks_valleys_quartiles(calls):
     
     return peaks, valleys
 
+def classify_graph_pattern(peaks, valleys, months):
+    """
+    Clasifica el patrón del gráfico en diferentes categorías
+    Retorna: pattern_type, issues, recommendations
+    """
+    all_points = []
+    
+    # Combinar todos los puntos con su tipo y mes
+    for peak in peaks:
+        all_points.append({'month': months[peak], 'type': 'peak', 'index': peak})
+    for valley in valleys:
+        all_points.append({'month': months[valley], 'type': 'valley', 'index': valley})
+    
+    # Ordenar por mes
+    all_points.sort(key=lambda x: x['month'])
+    
+    # Análisis de patrones
+    issues = []
+    recommendations = []
+    
+    # 1. Verificar alternancia (Normal vs Anormal)
+    is_alternating = True
+    for i in range(len(all_points) - 1):
+        if all_points[i]['type'] == all_points[i+1]['type']:
+            is_alternating = False
+            issues.append(f"Consecutive {all_points[i]['type']}s in months {all_points[i]['month']} and {all_points[i+1]['month']}")
+    
+    # 2. Verificar distancia mínima entre puntos
+    min_distance = 2  # meses
+    too_close = []
+    for i in range(len(all_points) - 1):
+        distance = all_points[i+1]['month'] - all_points[i]['month']
+        if distance < min_distance:
+            too_close.append(f"{all_points[i]['type']} (month {all_points[i]['month']}) and {all_points[i+1]['type']} (month {all_points[i+1]['month']}) are too close ({distance} month{'s' if distance != 1 else ''})")
+    
+    # 3. Verificar puntos en extremos (diciembre-enero)
+    circular_issues = []
+    for point in all_points:
+        if point['month'] == 12:
+            # Buscar si hay otro punto en enero
+            january_point = next((p for p in all_points if p['month'] == 1), None)
+            if january_point:
+                circular_issues.append(f"Year-end transition: {point['type']} in December and {january_point['type']} in January")
+    
+    # 4. Determinar tipo de patrón
+    if is_alternating and len(too_close) == 0 and len(all_points) == 4:
+        pattern_type = "Normal"
+        recommendations.append("Optimal pattern: Well-separated alternating peaks and valleys")
+    elif len(too_close) > 0:
+        pattern_type = "Clustered Points"
+        recommendations.append("Consider merging nearby points or using different detection parameters")
+    elif not is_alternating:
+        pattern_type = "Non-Alternating"
+        recommendations.append("Consider adjusting detection method or using mathematical strict approach")
+    elif len(all_points) < 4:
+        pattern_type = "Insufficient Points"
+        recommendations.append("Increase sensitivity or check data quality")
+    elif len(all_points) > 4:
+        pattern_type = "Too Many Points"
+        recommendations.append("Reduce sensitivity or use mathematical strict method")
+    else:
+        pattern_type = "Complex"
+        recommendations.append("Pattern requires manual review")
+    
+    # 5. Generar recomendaciones específicas
+    if len(too_close) > 0:
+        recommendations.append("Consider using 'Mathematical Strict' method for better separation")
+    if not is_alternating:
+        recommendations.append("Try 'Hybrid (3-4 months)' method for better seasonal patterns")
+    
+    return {
+        'pattern_type': pattern_type,
+        'is_alternating': is_alternating,
+        'total_points': len(all_points),
+        'issues': issues + too_close + circular_issues,
+        'recommendations': recommendations,
+        'all_points': all_points
+    }
+
+def optimize_midpoint_marks(pattern_analysis, months, calls, peaks, valleys):
+    """
+    Optimiza las marcas de punto medio basado en el análisis del patrón
+    """
+    all_points = pattern_analysis['all_points']
+    
+    if pattern_analysis['pattern_type'] == "Normal":
+        # Para patrones normales, usar el método estándar
+        return calculate_midpoint_lines(months, calls, peaks, valleys)
+    
+    elif pattern_analysis['pattern_type'] == "Clustered Points":
+        # Para puntos agrupados, intentar separarlos
+        optimized_lines = []
+        
+        # Agrupar puntos cercanos
+        clusters = []
+        current_cluster = [all_points[0]]
+        
+        for i in range(1, len(all_points)):
+            distance = all_points[i]['month'] - all_points[i-1]['month']
+            if distance <= 2:  # Puntos muy cercanos
+                current_cluster.append(all_points[i])
+            else:
+                clusters.append(current_cluster)
+                current_cluster = [all_points[i]]
+        clusters.append(current_cluster)
+        
+        # Para cada cluster, crear una marca representativa
+        for cluster in clusters:
+            if len(cluster) > 1:
+                # Calcular punto medio del cluster
+                avg_month = np.mean([p['month'] for p in cluster])
+                avg_value = np.mean([calls[p['index']] for p in cluster])
+                
+                # Determinar tipo dominante en el cluster
+                peak_count = sum(1 for p in cluster if p['type'] == 'peak')
+                valley_count = sum(1 for p in cluster if p['type'] == 'valley')
+                
+                cluster_type = 'peak' if peak_count > valley_count else 'valley'
+                
+                optimized_lines.append({
+                    'month': avg_month,
+                    'value': avg_value,
+                    'type': f'cluster_{cluster_type}',
+                    'original_points': len(cluster),
+                    'is_optimized': True
+                })
+        
+        return optimized_lines
+    
+    elif pattern_analysis['pattern_type'] in ["Non-Alternating", "Too Many Points"]:
+        # Usar método matemático estricto
+        strict_peaks, strict_valleys = detect_peaks_valleys_quartiles(calls)
+        return calculate_midpoint_lines(months, calls, strict_peaks, strict_valleys)
+    
+    else:
+        # Método estándar para otros casos
+        return calculate_midpoint_lines(months, calls, peaks, valleys)
+
 def calculate_annual_data(calls_df, company_id, mode="percentages"):
     """
     Calcula datos mensuales por año para una compañía específica.
@@ -617,6 +755,60 @@ def main():
             # Mostrar gráfico
             st.pyplot(fig)
             
+            # Análisis del patrón del gráfico
+            pattern_analysis = classify_graph_pattern(peaks, valleys, months)
+            
+            # Mostrar diagnóstico del patrón
+            st.markdown("---")
+            st.markdown(f"### 🔍 {_('Graph Pattern Analysis')}")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                # Tipo de patrón con color
+                if pattern_analysis['pattern_type'] == "Normal":
+                    st.success(f"**Pattern Type:** {pattern_analysis['pattern_type']} ✅")
+                elif pattern_analysis['pattern_type'] == "Clustered Points":
+                    st.warning(f"**Pattern Type:** {pattern_analysis['pattern_type']} ⚠️")
+                else:
+                    st.error(f"**Pattern Type:** {pattern_analysis['pattern_type']} ❌")
+            
+            with col2:
+                st.metric(_("Total Points"), pattern_analysis['total_points'])
+            
+            with col3:
+                st.metric(_("Is Alternating"), "Yes" if pattern_analysis['is_alternating'] else "No")
+            
+            # Mostrar issues si los hay
+            if pattern_analysis['issues']:
+                st.markdown("#### ⚠️ {_('Issues Detected:')}")
+                for issue in pattern_analysis['issues']:
+                    st.warning(f"• {issue}")
+            
+            # Mostrar recomendaciones
+            if pattern_analysis['recommendations']:
+                st.markdown("#### 💡 {_('Recommendations:')}")
+                for rec in pattern_analysis['recommendations']:
+                    st.info(f"• {rec}")
+            
+            # Mostrar marcas optimizadas
+            st.markdown("#### 🎯 {_('Optimized Midpoint Marks:')}")
+            optimized_marks = optimize_midpoint_marks(pattern_analysis, months, calls_absolute, peaks, valleys)
+            
+            if optimized_marks:
+                marks_info = []
+                for mark in optimized_marks:
+                    if 'is_optimized' in mark and mark['is_optimized']:
+                        marks_info.append(f"• **Month {mark['month']:.1f}**: {mark['type']} (optimized from {mark['original_points']} nearby points)")
+                    else:
+                        color_desc = "Green (Valley→Peak)" if mark['color'] == 'green' else "Red (Peak→Valley)"
+                        marks_info.append(f"• **Month {mark['month']:.1f}**: {color_desc}")
+                
+                if marks_info:
+                    st.info("\n".join(marks_info))
+            else:
+                st.warning("No midpoint marks could be calculated for this pattern")
+            
             # Mostrar estadísticas
             st.markdown("---")
             st.markdown(f"### {_('Analysis Statistics')}")
@@ -663,7 +855,7 @@ def main():
             # Tabla de datos mensuales
             st.markdown("---")
             if analysis_mode == "Percentages":
-                st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
+            st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
                 monthly_data = pd.DataFrame({
                     _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
                                 _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
@@ -674,14 +866,14 @@ def main():
                 })
             else:
                 st.markdown(f"### 📋 {_('Detailed Monthly Data - Absolute Numbers')}")
-                monthly_data = pd.DataFrame({
-                    _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
-                                _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
-                    _('Calls'): monthly_calls.astype(int),
-                    _('Percentage (%)'): calls.round(2),
-                    _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
-                    _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
-                })
+            monthly_data = pd.DataFrame({
+                _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
+                            _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
+                _('Calls'): monthly_calls.astype(int),
+                _('Percentage (%)'): calls.round(2),
+                _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
+                _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
+            })
             
             st.dataframe(monthly_data, use_container_width=True)
             
