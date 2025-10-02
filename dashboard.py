@@ -647,14 +647,26 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
             ax.axvline(x=1, color=circular_lines[0]['color'], linestyle='--', alpha=0.5, 
                       linewidth=2, label=f'Year-End Transition ({len(circular_lines)})')
     
-    # Marcar picos y valles (sin anotaciones para simplificar)
+    # Marcar picos y valles CON anotaciones
     if len(peaks) > 0:
         ax.plot(months[peaks], calls[peaks], '^', color='green', markersize=8, 
                 label=f'Peaks ({len(peaks)})', markeredgecolor='darkgreen', markeredgewidth=1)
+        # Anotaciones para picos (debajo de la curva)
+        for peak in peaks:
+            ax.annotate(f'{months[peak]:.0f}', xy=(months[peak], calls[peak]), 
+                       xytext=(0, -20), textcoords='offset points',
+                       ha='center', va='top', fontsize=10, fontweight='bold',
+                       bbox=dict(boxstyle='round,pad=0.3', facecolor='lightgreen', alpha=0.7))
     
     if len(valleys) > 0:
         ax.plot(months[valleys], calls[valleys], 'v', color='red', markersize=8,
                 label=f'Valleys ({len(valleys)})', markeredgecolor='darkred', markeredgewidth=1)
+        # Anotaciones para valles (encima de la curva)
+        for valley in valleys:
+            ax.annotate(f'{months[valley]:.0f}', xy=(months[valley], calls[valley]), 
+                       xytext=(0, 20), textcoords='offset points',
+                       ha='center', va='bottom', fontsize=10, fontweight='bold',
+                       bbox=dict(boxstyle='round,pad=0.3', facecolor='lightcoral', alpha=0.7))
     
     # Configurar gráfico
     ax.set_title(f'Inflection Points - {company_name} (ID: {company_id})\n{title_suffix} in Calls', 
@@ -861,7 +873,7 @@ def main():
             # Tabla de datos mensuales
             st.markdown("---")
             if analysis_mode == "Percentages":
-                st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
+            st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
                 monthly_data = pd.DataFrame({
                     _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
                                 _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
