@@ -92,7 +92,7 @@ def get_calls_info():
                 , EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)) AS `year`
                 , EXTRACT(MONTH FROM DATE(cl.lead_call_created_on)) AS `month`
                 , COUNT(cl.lead_call_id) AS `calls`
-             FROM `pph-central.silver.vw_consolidated_call_lead_location` cl
+             FROM `pph-central.silver.vw_consolidated_call_inbound_location` cl
              JOIN `pph-central.settings.companies` c ON cl.company_id = c.company_id
             WHERE DATE(cl.lead_call_created_on) < DATE("2025-09-01")
               AND EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)) >= 2015
