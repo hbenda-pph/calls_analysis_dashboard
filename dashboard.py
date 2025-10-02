@@ -155,7 +155,7 @@ def analyze_inflection_points_streamlit(calls_df, company_id, method="Original (
     # Aplicar método de detección seleccionado
     if method == "Original (find_peaks)":
         # Método original - más sensible
-        peaks, _ = find_peaks(calls, height=np.mean(calls), distance=2)
+    peaks, _ = find_peaks(calls, height=np.mean(calls), distance=2)
         valleys, _ = find_peaks(-calls, height=-np.mean(calls), distance=2)
         
     elif method == "Mathematical Strict":
@@ -569,13 +569,16 @@ def main():
         help=_("Choose between percentage analysis or absolute call numbers")
     )
     
-    # Selector de método de detección
-    detection_method = st.sidebar.selectbox(
-        _("Peak/Valley Detection Method:"),
-        options=["Original (find_peaks)", "Mathematical Strict", "Hybrid (3-4 months)"],
-        index=0,
-        help=_("Choose the method for detecting peaks and valleys")
-    )
+    # Selector de método de detección (OCULTADO TEMPORALMENTE)
+    # detection_method = st.sidebar.selectbox(
+    #     _("Peak/Valley Detection Method:"),
+    #     options=["Original (find_peaks)", "Mathematical Strict", "Hybrid (3-4 months)"],
+    #     index=2,  # Híbrido como predeterminado
+    #     help=_("Choose the method for detecting peaks and valleys")
+    # )
+    
+    # Método híbrido como predeterminado
+    detection_method = "Hybrid (3-4 months)"
     
     # Información de la compañía seleccionada
     company_data = calls_df[calls_df['company_id'] == company_id]
@@ -660,7 +663,7 @@ def main():
             # Tabla de datos mensuales
             st.markdown("---")
             if analysis_mode == "Percentages":
-                st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
+            st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
                 monthly_data = pd.DataFrame({
                     _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
                                 _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
@@ -671,14 +674,14 @@ def main():
                 })
             else:
                 st.markdown(f"### 📋 {_('Detailed Monthly Data - Absolute Numbers')}")
-                monthly_data = pd.DataFrame({
-                    _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
-                                _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
-                    _('Calls'): monthly_calls.astype(int),
-                    _('Percentage (%)'): calls.round(2),
-                    _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
-                    _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
-                })
+            monthly_data = pd.DataFrame({
+                _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
+                            _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
+                _('Calls'): monthly_calls.astype(int),
+                _('Percentage (%)'): calls.round(2),
+                _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
+                _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
+            })
             
             st.dataframe(monthly_data, use_container_width=True)
             
@@ -823,10 +826,9 @@ def main():
     - {_('Monthly percentages of the total annual are calculated')}
     - {_('Peaks and valleys are identified using the selected detection method')}
     
-    **🔍 {_('Detection Methods:')}**
-    - **{_('Original (find_peaks): Uses SciPy with height=mean, distance=2 months')}**
-    - **{_('Mathematical Strict: Always returns exactly 2 peaks and 2 valleys using quartiles')}**
-    - **{_('Hybrid (3-4 months): Uses SciPy with distance=3 months for better seasonal patterns')}**
+    **🔍 {_('Detection Method:')}**
+    - **{_('Hybrid (3-4 months): Uses SciPy with height=mean, distance=3 months for optimal seasonal patterns')}**
+    - **{_('This method provides better separation between seasonal peaks and valleys')}**
     
     **🎯 {_('Interpretation:')}**
     - **{_('Peaks (🔺): Months with higher call concentration')}**
