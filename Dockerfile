@@ -23,10 +23,10 @@ COPY . .
 RUN python compile_translations.py
 
 # Expose port
-EXPOSE 8080
+EXPOSE 8501
 
 # Health check
-HEALTHCHECK CMD curl --fail http://localhost:8080/_stcore/health
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
 # Run Streamlit
-CMD ["streamlit", "run", "dashboard.py", "--server.port=8080", "--server.headless=true"]
+CMD ["streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
