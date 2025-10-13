@@ -172,7 +172,13 @@ gcloud run deploy ${SERVICE_NAME} \
     --region ${REGION} \
     --allow-unauthenticated \
     --port 8501 \
-    --service-account ${SERVICE_ACCOUNT}
+    --service-account ${SERVICE_ACCOUNT} \
+    --memory 2Gi \
+    --cpu 2 \
+    --timeout 300 \
+    --max-instances 10 \
+    --min-instances 0 \
+    --concurrency 80
 
 if [ $? -eq 0 ]; then
     echo "✅ Deploy exitoso!"
