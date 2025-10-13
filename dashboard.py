@@ -22,8 +22,24 @@ from google.cloud import bigquery
 import gettext
 import locale
 import os
+import sys
 import warnings
 warnings.filterwarnings('ignore')
+
+# Importar estilos compartidos
+try:
+    # Intentar desde directorio padre (desarrollo local)
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../analysis_predictive_shared'))
+    from streamlit_config import apply_standard_styles
+except ImportError:
+    try:
+        # Intentar desde directorio actual (producción/Docker)
+        sys.path.append(os.path.join(os.path.dirname(__file__), 'analysis_predictive_shared'))
+        from streamlit_config import apply_standard_styles
+    except ImportError:
+        # Si no se encuentra, definir función vacía
+        def apply_standard_styles():
+            pass
 
 # Configuración de la página
 st.set_page_config(
@@ -705,6 +721,9 @@ def main():
     # Título principal
     st.title(_("ServiceTitan - Inflection Points Analysis"))
     st.markdown("---")
+    
+    # Aplicar estilos compartidos
+    apply_standard_styles()
     
     # Sidebar para controles
     st.sidebar.header(_("Controls"))
