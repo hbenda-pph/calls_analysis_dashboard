@@ -722,7 +722,7 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
 
 def main():
     # Título principal
-    st.title(_("ServiceTitan - Inflection Points Analysis"))
+    st.markdown(f"## {_('ServiceTitan - Inflection Points Analysis')}")
     st.markdown("---")
     
     # Sidebar para controles
