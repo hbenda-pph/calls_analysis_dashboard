@@ -49,6 +49,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Aplicar estilos compartidos INMEDIATAMENTE después de set_page_config
+apply_standard_styles()
+
 # =============================================================================
 # CONFIGURACIÓN DE GETTEXT
 # =============================================================================
@@ -721,9 +724,6 @@ def main():
     # Título principal
     st.title(_("ServiceTitan - Inflection Points Analysis"))
     st.markdown("---")
-    
-    # Aplicar estilos compartidos
-    apply_standard_styles()
     
     # Sidebar para controles
     st.sidebar.header(_("Controls"))
