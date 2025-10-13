@@ -982,7 +982,9 @@ def main():
                                   {'selector': 'th', 'props': [('text-align', 'center')]},
                                   {'selector': 'td', 'props': [('text-align', 'center')]}
                               ]))
-                st.dataframe(styled_table, use_container_width=True, height=None)
+                # Calcular altura dinámica: ~35px por fila + 35px header
+                table_height = (len(formatted_annual_table) + 1) * 35 + 3
+                st.dataframe(styled_table, use_container_width=True, height=table_height)
                 
                 # Estadísticas adicionales
                 st.markdown(f"#### 📈 {_('Annual Statistics')}")
