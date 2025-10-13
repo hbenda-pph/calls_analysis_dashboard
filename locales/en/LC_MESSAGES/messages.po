@@ -82,25 +82,6 @@ msgstr "No valleys identified"
 msgid "Detailed Monthly Data"
 msgstr "Detailed Monthly Data"
 
-# Historical Variability Table
-msgid "Historical Variability"
-msgstr "Historical Variability"
-
-msgid "Export to Google Sheets"
-msgstr "Export to Google Sheets"
-
-msgid "Average Mix"
-msgstr "Average Mix"
-
-msgid "Monthly Values"
-msgstr "Monthly Values"
-
-msgid "Variability"
-msgstr "Variability"
-
-msgid "Calls Count"
-msgstr "Calls Count"
-
 msgid "Detailed Monthly Data - Absolute Numbers"
 msgstr "Detailed Monthly Data - Absolute Numbers"
 

@@ -371,114 +371,6 @@ def calculate_annual_data(calls_df, company_id, mode="percentages"):
     
     return annual_table
 
-def create_historical_variability_table(monthly_calls, calls, analysis_mode="Percentages"):
-    """
-    Crea la tabla de variabilidad histórica con promedio y variabilidad por mes
-    """
-    # Calcular el promedio de los 12 meses
-    if analysis_mode == "Percentages":
-        # Para porcentajes, usar los valores de calls (que ya están como porcentajes)
-        average_mix = round(np.mean(calls), 2)
-        monthly_values = calls
-        avg_unit = "%"
-        var_unit = "pp"  # percentage points
-    else:
-        # Para números absolutos, usar monthly_calls
-        average_mix = round(np.mean(monthly_calls), 2)
-        monthly_values = monthly_calls
-        avg_unit = "calls"
-        var_unit = "calls"
-    
-    # Crear datos para la tabla
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    
-    # Calcular variabilidad (diferencia respecto al promedio)
-    variability = [round(monthly_values[i] - average_mix, 2) for i in range(12)]
-    
-    # Crear DataFrame
-    table_data = []
-    
-    # Primera fila: Average Mix
-    row_avg = [f"Average Mix ({avg_unit})"]
-    row_avg.extend([f"{average_mix:.2f}" if analysis_mode == "Percentages" else f"{average_mix:,.2f}"])
-    for _ in range(11):
-        row_avg.append("")
-    row_avg.extend([f"Avg Mix ({avg_unit})"])
-    for _ in range(11):
-        row_avg.append("")
-    table_data.append(row_avg)
-    
-    # Segunda fila: Valores mensuales
-    row_values = ["Monthly Values"]
-    for i, month in enumerate(months):
-        if analysis_mode == "Percentages":
-            row_values.append(f"{monthly_values[i]:.2f}%")
-        else:
-            row_values.append(f"{monthly_values[i]:,.0f}")
-    row_values.extend([f"Monthly Values ({avg_unit})"])
-    for _ in range(11):
-        row_values.append("")
-    table_data.append(row_values)
-    
-    # Tercera fila: Variabilidad
-    row_var = ["Variability"]
-    for _ in range(12):
-        row_var.append("")
-    row_var.extend([f"Variability ({var_unit})"])
-    for i, month in enumerate(months):
-        if variability[i] >= 0:
-            row_var.append(f"+{variability[i]:.2f}" if analysis_mode == "Percentages" else f"+{variability[i]:,.2f}")
-        else:
-            row_var.append(f"{variability[i]:.2f}" if analysis_mode == "Percentages" else f"{variability[i]:,.2f}")
-    table_data.append(row_var)
-    
-    # Crear columnas
-    columns = ['Metric'] + months + ['Avg Mix'] + [f'{month}_var' for month in months]
-    
-    # Crear DataFrame
-    df = pd.DataFrame(table_data, columns=columns)
-    
-    # Aplicar estilos
-    def highlight_variability(row):
-        styles = ['font-weight: bold']  # Primera columna en negrita
-        
-        # Columnas de valores mensuales (2-13)
-        for i in range(1, 13):
-            if row.index[i] in ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']:
-                styles.append('background-color: #e8f4f8')
-            else:
-                styles.append('')
-        
-        # Columna Average Mix (14)
-        styles.append('background-color: #fff2cc; font-weight: bold')
-        
-        # Columnas de variabilidad (15-26)
-        for i in range(14, 26):
-            if row.index[i].endswith('_var'):
-                # Aplicar colores según el signo de la variabilidad
-                if i >= 15:  # Primera fila de variabilidad
-                    var_idx = i - 15
-                    if var_idx < len(variability):
-                        if variability[var_idx] > 0:
-                            styles.append('background-color: #d4edda; color: #155724')  # Verde para positivo
-                        elif variability[var_idx] < 0:
-                            styles.append('background-color: #f8d7da; color: #721c24')  # Rojo para negativo
-                        else:
-                            styles.append('background-color: #f8f9fa')  # Gris para cero
-                    else:
-                        styles.append('')
-                else:
-                    styles.append('')
-            else:
-                styles.append('')
-        
-        return styles
-    
-    styled_df = df.style.apply(highlight_variability, axis=1)
-    
-    return styled_df, df
-
 def create_annual_table(annual_table, historical_data=None, mode="percentages"):
     """
     Crea una tabla formateada para mostrar datos anuales.
@@ -761,20 +653,32 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
                 label=f'Peaks ({len(peaks)})', markeredgecolor='darkgreen', markeredgewidth=1)
         # Anotaciones para picos (debajo de la curva)
         for peak in peaks:
-            ax.annotate(f'{months[peak]:.0f}', xy=(months[peak], calls[peak]), 
-                       xytext=(0, -20), textcoords='offset points',
-                       ha='center', va='top', fontsize=10, fontweight='bold',
-                       bbox=dict(boxstyle='round,pad=0.3', facecolor='lightgreen', alpha=0.7))
+            # Determinar formato según el modo de análisis
+            if analysis_mode == "Absolute Numbers":
+                value_text = f'{calls[peak]:.0f}'  # Enteros para cantidades
+            else:
+                value_text = f'{calls[peak]:.2f}%'  # 2 decimales para porcentajes
+            
+            ax.annotate(value_text, xy=(months[peak], calls[peak]), 
+                       xytext=(0, -15), textcoords='offset points',
+                       ha='center', va='top', fontsize=10, fontweight='bold', color='darkgreen',
+                       bbox=dict(boxstyle='round,pad=0.4', facecolor='lightgreen', alpha=0.8, edgecolor='darkgreen', linewidth=1.5))
     
     if len(valleys) > 0:
         ax.plot(months[valleys], calls[valleys], 'v', color='red', markersize=8,
                 label=f'Valleys ({len(valleys)})', markeredgecolor='darkred', markeredgewidth=1)
         # Anotaciones para valles (encima de la curva)
         for valley in valleys:
-            ax.annotate(f'{months[valley]:.0f}', xy=(months[valley], calls[valley]), 
-                       xytext=(0, 20), textcoords='offset points',
-                       ha='center', va='bottom', fontsize=10, fontweight='bold',
-                       bbox=dict(boxstyle='round,pad=0.3', facecolor='lightcoral', alpha=0.7))
+            # Determinar formato según el modo de análisis
+            if analysis_mode == "Absolute Numbers":
+                value_text = f'{calls[valley]:.0f}'  # Enteros para cantidades
+            else:
+                value_text = f'{calls[valley]:.2f}%'  # 2 decimales para porcentajes
+            
+            ax.annotate(value_text, xy=(months[valley], calls[valley]), 
+                       xytext=(0, 15), textcoords='offset points',
+                       ha='center', va='bottom', fontsize=10, fontweight='bold', color='darkred',
+                       bbox=dict(boxstyle='round,pad=0.4', facecolor='lightcoral', alpha=0.8, edgecolor='darkred', linewidth=1.5))
     
     # Configurar gráfico
     ax.set_title(f'Inflection Points - {company_name} (ID: {company_id})\n{title_suffix} in Calls', 
@@ -948,10 +852,10 @@ def main():
                 st.metric(_("Valleys Identified"), len(valleys))
             
             with col3:
-                st.metric(_("Monthly Average"), f"{np.mean(calls):.1f}%")
+                st.metric(_("Monthly Average"), f"{np.mean(calls):.2f}%")
             
             with col4:
-                st.metric(_("Maximum Variation"), f"{np.max(calls) - np.min(calls):.1f}%")
+                st.metric(_("Maximum Variation"), f"{np.max(calls) - np.min(calls):.2f}%")
             
             # Detalles de picos y valles
             col1, col2 = st.columns(2)
@@ -963,7 +867,10 @@ def main():
                                  _("July"), _("August"), _("September"), _("October"), _("November"), _("December")]
                     for i, peak in enumerate(peaks, 1):
                         month_name = month_names[months[peak]-1]
-                        st.write(f"**{i}.** {_('Month')} {months[peak]} ({month_name}): {calls[peak]:.1f}% {_('of total')}")
+                        if analysis_mode == "Absolute Numbers":
+                            st.write(f"**{i}.** {_('Month')} {months[peak]} ({month_name}): {calls_absolute[peak]:.0f} {_('calls')}")
+                        else:
+                            st.write(f"**{i}.** {_('Month')} {months[peak]} ({month_name}): {calls[peak]:.2f}% {_('of total')}")
                 else:
                     st.write(_("No peaks identified"))
             
@@ -974,7 +881,10 @@ def main():
                                  _("July"), _("August"), _("September"), _("October"), _("November"), _("December")]
                     for i, valley in enumerate(valleys, 1):
                         month_name = month_names[months[valley]-1]
-                        st.write(f"**{i}.** {_('Month')} {months[valley]} ({month_name}): {calls[valley]:.1f}% {_('of total')}")
+                        if analysis_mode == "Absolute Numbers":
+                            st.write(f"**{i}.** {_('Month')} {months[valley]} ({month_name}): {calls_absolute[valley]:.0f} {_('calls')}")
+                        else:
+                            st.write(f"**{i}.** {_('Month')} {months[valley]} ({month_name}): {calls[valley]:.2f}% {_('of total')}")
                 else:
                     st.write(_("No valleys identified"))
             
@@ -1001,23 +911,10 @@ def main():
                     _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
                 })
             
-            st.dataframe(monthly_data, use_container_width=True)
+            st.dataframe(monthly_data, use_container_width=True, height=490)
             
             # Tabla de datos anuales
             st.markdown("---")
-            # Mostrar tabla de variabilidad histórica
-            st.markdown(f"### 📊 {_('Historical Variability')}")
-            historical_variability_styled, historical_variability_df = create_historical_variability_table(
-                monthly_calls, calls, analysis_mode
-            )
-            st.dataframe(historical_variability_styled, use_container_width=True)
-            
-            # Botón de exportación para Google Sheets
-            if st.button(f"📤 {_('Export to Google Sheets')}", key="export_variability"):
-                st.info(_("Google Sheets export functionality would be implemented here"))
-            
-            st.markdown("---")
-            
             if analysis_mode == "Percentages":
                 st.markdown(f"### 📊 {_('Annual Percentage Breakdown')}")
                 st.markdown(f"*{_('Each month shows the percentage of total calls for that specific year')}*")
@@ -1085,7 +982,7 @@ def main():
                                   {'selector': 'th', 'props': [('text-align', 'center')]},
                                   {'selector': 'td', 'props': [('text-align', 'center')]}
                               ]))
-                st.dataframe(styled_table, use_container_width=True)
+                st.dataframe(styled_table, use_container_width=True, height=None)
                 
                 # Estadísticas adicionales
                 st.markdown(f"#### 📈 {_('Annual Statistics')}")
@@ -1109,7 +1006,7 @@ def main():
                     if analysis_mode == "Percentages":
                         st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.2f}%")
                     else:
-                        st.metric(_("Avg Annual Variation"), f"{int(avg_annual_variation)} calls")
+                        st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.2f} calls")
                 
                 with col3:
                     most_active_month = formatted_annual_table.mean().idxmax()
