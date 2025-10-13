@@ -397,8 +397,11 @@ def create_annual_table(annual_table, historical_data=None, mode="percentages"):
     
     # Agregar fila histórica si se proporciona
     if historical_data is not None:
-        # Crear fila histórica
-        historical_row = pd.Series(historical_data, index=month_names)
+        # Crear fila histórica y formatear según el modo
+        if mode == "percentages":
+            historical_row = pd.Series(historical_data.round(2), index=month_names)
+        else:  # absolute
+            historical_row = pd.Series(historical_data.round(0).astype(int), index=month_names)
         historical_row.name = 'Historical Total'
         
         # Agregar al DataFrame
@@ -974,14 +977,26 @@ def main():
                     return ['' for _ in row]
                 
                 # Aplicar estilos y mostrar tabla
-                styled_table = (formatted_annual_table
-                              .style
-                              .apply(highlight_max_min, axis=1)
-                              .apply(highlight_historical_row, axis=1)
-                              .set_table_styles([
-                                  {'selector': 'th', 'props': [('text-align', 'center')]},
-                                  {'selector': 'td', 'props': [('text-align', 'center')]}
-                              ]))
+                if mode_key == "percentages":
+                    styled_table = (formatted_annual_table
+                                  .style
+                                  .format("{:.2f}")  # 2 decimales para porcentajes
+                                  .apply(highlight_max_min, axis=1)
+                                  .apply(highlight_historical_row, axis=1)
+                                  .set_table_styles([
+                                      {'selector': 'th', 'props': [('text-align', 'center')]},
+                                      {'selector': 'td', 'props': [('text-align', 'center')]}
+                                  ]))
+                else:  # absolute
+                    styled_table = (formatted_annual_table
+                                  .style
+                                  .format("{:.0f}")  # Enteros para cantidades
+                                  .apply(highlight_max_min, axis=1)
+                                  .apply(highlight_historical_row, axis=1)
+                                  .set_table_styles([
+                                      {'selector': 'th', 'props': [('text-align', 'center')]},
+                                      {'selector': 'td', 'props': [('text-align', 'center')]}
+                                  ]))
                 # Calcular altura dinámica: ~35px por fila + 35px header
                 table_height = (len(formatted_annual_table) + 1) * 35 + 3
                 st.dataframe(styled_table, use_container_width=True, height=table_height)
