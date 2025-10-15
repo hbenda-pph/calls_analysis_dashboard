@@ -436,7 +436,7 @@ def create_scatter_with_midpoints(annual_table, midpoint_lines, company_id, comp
     if annual_table is None or annual_table.empty:
         return None
     
-    fig, ax = plt.subplots(figsize=(12, 7))
+    fig, ax = plt.subplots(figsize=(14, 8))
     
     # Preparar datos para dispersión
     scatter_data = []
@@ -618,8 +618,8 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
     """
     Crea el gráfico de puntos de inflexión para Streamlit
     """
-    # Crear figura (tamaño compacto para dashboard científico)
-    fig, ax = plt.subplots(figsize=(10, 6))
+    # Crear figura
+    fig, ax = plt.subplots(figsize=(12, 8))
     
     # Línea suave
     if len(months) > 3:
@@ -702,24 +702,19 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
                        ha='center', va='bottom', fontsize=10, fontweight='bold', color='darkred',
                        bbox=dict(boxstyle='round,pad=0.4', facecolor='lightcoral', alpha=0.8, edgecolor='darkred', linewidth=1.5))
     
-    # Configurar gráfico
+    # Configurar gráfico con texto más pequeño
     ax.set_title(f'Inflection Points - {company_name} (ID: {company_id})\n{title_suffix} in Calls', 
-                 fontsize=14, fontweight='bold')
-    ax.set_xlabel('Month', fontsize=12)
-    ax.set_ylabel(ylabel_text, fontsize=12)
+                 fontsize=12, fontweight='bold')
+    ax.set_xlabel('Month', fontsize=10)
+    ax.set_ylabel(ylabel_text, fontsize=10)
     ax.set_xticks(range(1, 13))
     ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
-    ax.legend(fontsize=11)
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], fontsize=9)
+    ax.tick_params(axis='y', labelsize=9)
+    ax.legend(fontsize=9)
     
-    # OPCIÓN B: Grid más sutil (Para revertir: cambiar a alpha=0.3)
+    # Grid más sutil
     ax.grid(True, alpha=0.15, linestyle='--', linewidth=0.5)
-    
-    # OPCIÓN C: Bordes limpios - solo izquierda y abajo (Para revertir: comentar estas 4 líneas)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_linewidth(0.8)
-    ax.spines['bottom'].set_linewidth(0.8)
     
     plt.tight_layout()
     return fig
