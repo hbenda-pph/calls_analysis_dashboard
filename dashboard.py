@@ -711,7 +711,15 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
     ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
     ax.legend(fontsize=11)
-    ax.grid(True, alpha=0.3)
+    
+    # OPCIÓN B: Grid más sutil (Para revertir: cambiar a alpha=0.3)
+    ax.grid(True, alpha=0.15, linestyle='--', linewidth=0.5)
+    
+    # OPCIÓN C: Bordes limpios - solo izquierda y abajo (Para revertir: comentar estas 4 líneas)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_linewidth(0.8)
+    ax.spines['bottom'].set_linewidth(0.8)
     
     plt.tight_layout()
     return fig
