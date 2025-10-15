@@ -436,7 +436,7 @@ def create_scatter_with_midpoints(annual_table, midpoint_lines, company_id, comp
     if annual_table is None or annual_table.empty:
         return None
     
-    fig, ax = plt.subplots(figsize=(14, 8))
+    fig, ax = plt.subplots(figsize=(12, 7))
     
     # Preparar datos para dispersión
     scatter_data = []
@@ -618,8 +618,8 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
     """
     Crea el gráfico de puntos de inflexión para Streamlit
     """
-    # Crear figura
-    fig, ax = plt.subplots(figsize=(12, 8))
+    # Crear figura (tamaño compacto para dashboard científico)
+    fig, ax = plt.subplots(figsize=(10, 6))
     
     # Línea suave
     if len(months) > 3:
