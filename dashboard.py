@@ -723,10 +723,6 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
 def main():
     # Título principal
     st.markdown(f"## {_('ServiceTitan - Inflection Points Analysis')}")
-    st.markdown("---")
-    
-    # Sidebar para controles
-    st.sidebar.header(_("Controls"))
     
     # Cargar datos
     with st.spinner(_("Loading data from BigQuery...")):
@@ -740,58 +736,49 @@ def main():
     companies_info = calls_df[['company_id', 'company_name']].drop_duplicates().sort_values('company_id')
     companies_dict = dict(zip(companies_info['company_id'], companies_info['company_name']))
     
-    # Selector de compañía
-    selected_company_name = st.sidebar.selectbox(
-        _("Select Company:"),
-        options=list(companies_dict.values()),
-        index=0,
-        help=_("Select the company to analyze its inflection points")
-    )
-    
-    # Obtener el ID de la compañía seleccionada
-    company_id = [k for k, v in companies_dict.items() if v == selected_company_name][0]
-    
-    # Selector de modo de análisis
-    analysis_mode = st.sidebar.selectbox(
-        _("Analysis Mode:"),
-        options=["Percentages", "Absolute Numbers"],
-        index=0,
-        help=_("Choose between percentage analysis or absolute call numbers")
-    )
-    
-    # Selector de método de detección (OCULTADO TEMPORALMENTE)
-    # detection_method = st.sidebar.selectbox(
-    #     _("Peak/Valley Detection Method:"),
-    #     options=["Original (find_peaks)", "Mathematical Strict", "Hybrid (3-4 months)"],
-    #     index=2,  # Híbrido como predeterminado
-    #     help=_("Choose the method for detecting peaks and valleys")
-    # )
+    # Panel de control
+    with st.sidebar:
+        st.markdown(f"**{_('Control Panel')}**")
+        
+        # Selector de compañía
+        selected_company_name = st.selectbox(
+            _("Company"),
+            options=list(companies_dict.values()),
+            index=0
+        )
+        
+        # Obtener el ID de la compañía seleccionada
+        company_id = [k for k, v in companies_dict.items() if v == selected_company_name][0]
+        
+        # Selector de modo de análisis
+        analysis_mode = st.selectbox(
+            _("Analysis Mode"),
+            options=["Percentages", "Absolute"],
+            index=0
+        )
+        
+        st.markdown("---")
+        
+        # Información compacta de la compañía
+        company_data = calls_df[calls_df['company_id'] == company_id]
+        total_calls_company = company_data['calls'].sum()
+        years_range = f"{company_data['year'].min()}-{company_data['year'].max()}"
+        
+        st.caption(f"📊 ID: {company_id}")
+        st.caption(f"📅 {years_range}")
+        st.caption(f"📞 {total_calls_company:,} calls")
     
     # Método híbrido como predeterminado
     detection_method = "Hybrid (3-4 months)"
     
-    # Información de la compañía seleccionada
-    company_data = calls_df[calls_df['company_id'] == company_id]
-    total_calls_company = company_data['calls'].sum()
-    years_range = f"{company_data['year'].min()} - {company_data['year'].max()}"
-    states = company_data['state'].unique()
-    
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(f"### {_('Company Information')}")
-    st.sidebar.write(f"**{_('Name:')}** {selected_company_name}")
-    st.sidebar.write(f"**{_('ID:')}** {company_id}")
-    st.sidebar.write(f"**{_('Total Calls:')}** {total_calls_company:,}")
-    st.sidebar.write(f"**{_('Years:')}** {years_range}")
-    st.sidebar.write(f"**{_('States:')}** {', '.join(states)}")
-    
-    # Botón para generar análisis
-    if st.sidebar.button(_("Generate Analysis"), type="primary"):
+    # Generar análisis automáticamente (sin botón)
+    if True:
         # Realizar análisis
         months, calls, peaks, valleys, total_calls, monthly_calls = analyze_inflection_points_streamlit(calls_df, company_id, detection_method)
         
         if months is not None:
             # Ajustar datos según el modo seleccionado
-            if analysis_mode == "Absolute Numbers":
+            if analysis_mode == "Absolute":
                 # Convertir porcentajes a números absolutos para el gráfico
                 calls_absolute = (calls / 100) * total_calls
                 ylabel_text = 'Number of Calls'
@@ -801,161 +788,43 @@ def main():
                 ylabel_text = 'Percentage of Total Calls (%)'
                 title_suffix = 'Percentage Analysis'
             
+            # Información compacta antes del gráfico
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.caption(f"📊 {len(peaks)} Peaks")
+            with col2:
+                st.caption(f"📉 {len(valleys)} Valleys")
+            with col3:
+                st.caption(f"📈 Avg: {np.mean(calls):.2f}%")
+            with col4:
+                st.caption(f"📅 12 months")
+            
             # Crear gráfico
             fig = create_inflection_chart(months, calls_absolute, peaks, valleys, company_id, selected_company_name, ylabel_text, title_suffix, analysis_mode)
             
             # Mostrar gráfico
             st.pyplot(fig)
             
-            # Análisis del patrón del gráfico
-            pattern_analysis = classify_graph_pattern(peaks, valleys, months)
-            
-            # Mostrar diagnóstico del patrón
-            st.markdown("---")
-            st.markdown(f"### 🔍 {_('Graph Pattern Analysis')}")
-            
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                # Tipo de patrón con color
-                if pattern_analysis['pattern_type'] == "Normal":
-                    st.success(f"**Pattern Type:** {pattern_analysis['pattern_type']} ✅")
-                elif pattern_analysis['pattern_type'] == "Clustered Points":
-                    st.warning(f"**Pattern Type:** {pattern_analysis['pattern_type']} ⚠️")
-                else:
-                    st.error(f"**Pattern Type:** {pattern_analysis['pattern_type']} ❌")
-            
-            with col2:
-                st.metric(_("Total Points"), pattern_analysis['total_points'])
-            
-            with col3:
-                st.metric(_("Is Alternating"), "Yes" if pattern_analysis['is_alternating'] else "No")
-            
-            # Mostrar issues si los hay
-            if pattern_analysis['issues']:
-                st.markdown(f"#### ⚠️ {_('Issues Detected:')}")
-                for issue in pattern_analysis['issues']:
-                    st.warning(f"• {issue}")
-            
-            # Mostrar recomendaciones
-            if pattern_analysis['recommendations']:
-                st.markdown(f"#### 💡 {_('Recommendations:')}")
-                for rec in pattern_analysis['recommendations']:
-                    st.info(f"• {rec}")
-            
-            # Mostrar marcas optimizadas
-            st.markdown(f"#### 🎯 {_('Optimized Midpoint Marks:')}")
-            optimized_marks = optimize_midpoint_marks(pattern_analysis, months, calls_absolute, peaks, valleys)
-            
-            if optimized_marks:
-                marks_info = []
-                for mark in optimized_marks:
-                    if 'is_optimized' in mark and mark['is_optimized']:
-                        marks_info.append(f"• **Month {mark['month']:.1f}**: {mark['type']} (optimized from {mark['original_points']} nearby points)")
-                    else:
-                        color_desc = "Green (Valley→Peak)" if mark['color'] == 'green' else "Red (Peak→Valley)"
-                        marks_info.append(f"• **Month {mark['month']:.1f}**: {color_desc}")
-                
-                if marks_info:
-                    st.info("\n".join(marks_info))
-            else:
-                st.warning("No midpoint marks could be calculated for this pattern")
-            
-            # Mostrar estadísticas
-            st.markdown("---")
-            st.markdown(f"### {_('Analysis Statistics')}")
-            
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.metric(_("Peaks Identified"), len(peaks))
-            
-            with col2:
-                st.metric(_("Valleys Identified"), len(valleys))
-            
-            with col3:
-                st.metric(_("Monthly Average"), f"{np.mean(calls):.2f}%")
-            
-            with col4:
-                st.metric(_("Maximum Variation"), f"{np.max(calls) - np.min(calls):.2f}%")
-            
-            # Detalles de picos y valles
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown(f"#### 🔺 {_('Identified Peaks')}")
-                if len(peaks) > 0:
-                    month_names = [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"), 
-                                 _("July"), _("August"), _("September"), _("October"), _("November"), _("December")]
-                    for i, peak in enumerate(peaks, 1):
-                        month_name = month_names[months[peak]-1]
-                        if analysis_mode == "Absolute Numbers":
-                            st.write(f"**{i}.** {_('Month')} {months[peak]} ({month_name}): {calls_absolute[peak]:.0f} {_('calls')}")
-                        else:
-                            st.write(f"**{i}.** {_('Month')} {months[peak]} ({month_name}): {calls[peak]:.2f}% {_('of total')}")
-                else:
-                    st.write(_("No peaks identified"))
-            
-            with col2:
-                st.markdown(f"#### 🔻 {_('Identified Valleys')}")
-                if len(valleys) > 0:
-                    month_names = [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"), 
-                                 _("July"), _("August"), _("September"), _("October"), _("November"), _("December")]
-                    for i, valley in enumerate(valleys, 1):
-                        month_name = month_names[months[valley]-1]
-                        if analysis_mode == "Absolute Numbers":
-                            st.write(f"**{i}.** {_('Month')} {months[valley]} ({month_name}): {calls_absolute[valley]:.0f} {_('calls')}")
-                        else:
-                            st.write(f"**{i}.** {_('Month')} {months[valley]} ({month_name}): {calls[valley]:.2f}% {_('of total')}")
-                else:
-                    st.write(_("No valleys identified"))
-            
             # Tabla de datos mensuales
-            st.markdown("---")
+            st.markdown(f"### {_('Monthly Data')}")
             if analysis_mode == "Percentages":
-                st.markdown(f"### 📋 {_('Detailed Monthly Data')}")
                 monthly_data = pd.DataFrame({
                     _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
                                 _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
                     _('Calls'): monthly_calls.astype(int),
-                    _('Percentage (%)'): calls.round(2),
-                    _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
-                    _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
+                    _('Percentage (%)'): calls.round(2)
                 })
             else:
-                st.markdown(f"### 📋 {_('Detailed Monthly Data - Absolute Numbers')}")
                 monthly_data = pd.DataFrame({
                     _('Month'): [_("January"), _("February"), _("March"), _("April"), _("May"), _("June"),
                                 _("July"), _("August"), _("September"), _("October"), _("November"), _("December")],
-                    _('Calls'): monthly_calls.astype(int),
-                    _('Calls Count'): monthly_calls.astype(int),
-                    _('Is Peak'): ['✅' if i in peaks else '' for i in range(12)],
-                    _('Is Valley'): ['✅' if i in valleys else '' for i in range(12)]
+                    _('Calls'): monthly_calls.astype(int)
                 })
             
             st.dataframe(monthly_data, use_container_width=True, height=490)
             
             # Tabla de datos anuales
-            st.markdown("---")
-            if analysis_mode == "Percentages":
-                st.markdown(f"### 📊 {_('Annual Percentage Breakdown')}")
-                st.markdown(f"*{_('Each month shows the percentage of total calls for that specific year')}*")
-            else:
-                st.markdown(f"### 📊 {_('Annual Absolute Numbers Breakdown')}")
-                st.markdown(f"*{_('Each month shows the absolute number of calls for that specific year')}*")
-            
-            # Explicación de colores
-            st.markdown(f"**🎨 {_('Color Legend:')}**")
-            st.markdown("- **🟢 Verde**: Month with highest calls in that year")
-            st.markdown("- **🟡 Rosa**: Month with lowest calls in that year (excluding zeros)")
-            st.markdown("- **⚪ Gris**: Months with no data (0 calls)")
-            st.markdown("- **🟣 Lavanda**: Historical validation row")
-            
-            if analysis_mode == "Percentages":
-                note_text = _("The 'Historical Total' row shows percentages from the main chart for validation")
-            else:
-                note_text = _("The 'Historical Total' row shows absolute numbers from the main chart for validation")
-            st.markdown(f"**💡 {_('Note:')}** {note_text}")
+            st.markdown(f"### {_('Annual Data')}")
             
             # Calcular tabla de datos anuales
             mode_key = "percentages" if analysis_mode == "Percentages" else "absolute"
@@ -1020,34 +889,6 @@ def main():
                 table_height = (len(formatted_annual_table) + 1) * 35 + 3
                 st.dataframe(styled_table, use_container_width=True, height=table_height)
                 
-                # Estadísticas adicionales
-                st.markdown(f"#### 📈 {_('Annual Statistics')}")
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric(_("Years Analyzed"), len(formatted_annual_table))
-                
-                with col2:
-                    # Calcular variación por año y luego promediar
-                    annual_variations = []
-                    for year in formatted_annual_table.index:
-                        year_data = formatted_annual_table.loc[year]
-                        non_zero_data = year_data[year_data > 0]  # Excluir ceros
-                        if len(non_zero_data) > 0:
-                            year_variation = non_zero_data.max() - non_zero_data.min()
-                            annual_variations.append(year_variation)
-                    
-                    avg_annual_variation = np.mean(annual_variations) if annual_variations else 0
-                    
-                    if analysis_mode == "Percentages":
-                        st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.2f}%")
-                    else:
-                        st.metric(_("Avg Annual Variation"), f"{avg_annual_variation:.2f} calls")
-                
-                with col3:
-                    most_active_month = formatted_annual_table.mean().idxmax()
-                    st.metric(_("Most Active Month"), most_active_month)
-                
                 # Gráfico de dispersión con líneas de punto medio (COMENTADO TEMPORALMENTE)
                 # st.markdown("---")
                 # st.markdown(f"### 🎯 {_('Annual Data vs Historical Transitions')}")
@@ -1079,26 +920,7 @@ def main():
                 st.warning(_("No annual data available for this company"))
             
         else:
-            st.error(f"❌ {_('No data found for company')} {company_id}")
-    
-    # Información adicional
-    st.markdown("---")
-    st.markdown(f"### ℹ️ {_('Analysis Information')}")
-    st.info(f"""
-    **📊 {_('Methodology:')}**
-    - {_('Data is grouped by month summing all calls from all years')}
-    - {_('Monthly percentages of the total annual are calculated')}
-    - {_('Peaks and valleys are identified using the selected detection method')}
-    
-    **🔍 {_('Detection Method:')}**
-    - **{_('Hybrid (3-4 months): Uses SciPy with height=mean, distance=3 months for optimal seasonal patterns')}**
-    - **{_('This method provides better separation between seasonal peaks and valleys')}**
-    
-    **🎯 {_('Interpretation:')}**
-    - **{_('Peaks (🔺): Months with higher call concentration')}**
-    - **{_('Valleys (🔻): Months with lower call concentration')}**
-    - **{_('Percentages: Represent the proportion of calls for each month relative to the annual total')}**
-    """)
+            st.error(f"{_('No data found for company')} {company_id}")
 
 if __name__ == "__main__":
     main()
