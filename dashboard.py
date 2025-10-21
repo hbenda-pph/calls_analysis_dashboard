@@ -94,7 +94,7 @@ def _(text):
 # FUNCIONES BASE (copiadas de base_functions_notebook.py)
 # =============================================================================
 
-@st.cache_data
+@st.cache_data(ttl=3600)  # Cache por 1 hora (3600 segundos)
 def get_calls_info():
     """
     Extrae información consolidada de llamadas de ServiceTitan desde BigQuery.

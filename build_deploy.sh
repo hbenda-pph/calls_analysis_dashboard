@@ -79,6 +79,13 @@ esac
 
 REGION="us-east1"
 IMAGE_TAG="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
+MEMORY="2Gi"
+CPU="2"
+TIMEOUT="300"
+MAX_INSTANCES="10"
+MIN_INSTANCES="0"
+CONCURRENCY="80"
+PORT="8501"
 
 echo "🚀 Iniciando Build & Deploy para Calls Analysis Dashboard"
 echo "================================================================"
@@ -88,6 +95,13 @@ echo "   Proyecto: ${PROJECT_ID}"
 echo "   Servicio: ${SERVICE_NAME}"
 echo "   Región: ${REGION}"
 echo "   Imagen: ${IMAGE_TAG}"
+echo "   Memory: ${MEMORY}"
+echo "   CPU:    ${CPU}"
+echo "   Timeout:       ${TIMEOUT}s"
+echo "   Max Instances: ${MAX_INSTANCES}"
+echo "   Min Instances: ${MIN_INSTANCES}"
+echo "   Concurrency:   ${CONCURRENCY}"
+echo "   Port:          ${PORT}"
 echo "   Service Account: ${SERVICE_ACCOUNT}"
 echo ""
 
@@ -181,26 +195,46 @@ else
 fi
 
 echo ""
-echo "🚀 PASO 3: DEPLOY (Desplegando a Cloud Run)"
-echo "============================================="
-gcloud run deploy ${SERVICE_NAME} \
-    --image ${IMAGE_TAG} \
-    --platform managed \
-    --region ${REGION} \
-    --allow-unauthenticated \
-    --port 8501 \
-    --service-account ${SERVICE_ACCOUNT} \
-    --memory 2Gi \
-    --cpu 2 \
-    --timeout 300 \
-    --max-instances 10 \
-    --min-instances 0 \
-    --concurrency 80
+echo "🚀 PASO 3: CREATE/UPDATE SERVICE"
+echo "================================="
+
+# Verificar si el servicio ya existe
+if gcloud run services describe ${SERVICE_NAME} --region=${REGION} --project=${PROJECT_ID} &> /dev/null; then
+    echo "📝 Servicio existe, actualizando..."
+    gcloud run services update ${SERVICE_NAME} \
+        --image ${IMAGE_TAG} \
+        --region ${REGION} \
+        --project ${PROJECT_ID} \
+        --memory ${MEMORY} \
+        --cpu ${CPU} \
+        --timeout ${TIMEOUT} \
+        --max-instances ${MAX_INSTANCES} \
+        --min-instances ${MIN_INSTANCES} \
+        --concurrency ${CONCURRENCY} \
+        --port ${PORT} \
+        --service-account ${SERVICE_ACCOUNT}
+else
+    echo "🆕 Servicio no existe, creando..."
+    gcloud run deploy ${SERVICE_NAME} \
+        --image ${IMAGE_TAG} \
+        --platform managed \
+        --region ${REGION} \
+        --project ${PROJECT_ID} \
+        --allow-unauthenticated \
+        --port ${PORT} \
+        --service-account ${SERVICE_ACCOUNT} \
+        --memory ${MEMORY} \
+        --cpu ${CPU} \
+        --timeout ${TIMEOUT} \
+        --max-instances ${MAX_INSTANCES} \
+        --min-instances ${MIN_INSTANCES} \
+        --concurrency ${CONCURRENCY}
+fi
 
 if [ $? -eq 0 ]; then
-    echo "✅ Deploy exitoso!"
+    echo "✅ Servicio creado/actualizado exitosamente!"
 else
-    echo "❌ Error en el deploy"
+    echo "❌ Error creando/actualizando servicio"
     exit 1
 fi
 
@@ -209,23 +243,32 @@ echo "🎉 ¡DEPLOY COMPLETADO EXITOSAMENTE!"
 echo "=================================="
 echo ""
 echo "🌍 AMBIENTE: ${ENVIRONMENT^^}"
-echo "📊 Para ver tu dashboard:"
-echo "   1. Ve a: https://console.cloud.google.com/run?project=${PROJECT_ID}"
-echo "   2. Selecciona el servicio: ${SERVICE_NAME}"
-echo "   3. Haz clic en la URL del servicio"
+echo "📊 Información del servicio:"
+echo "   Proyecto: ${PROJECT_ID}"
+echo "   Servicio: ${SERVICE_NAME}"
+echo "   Región:   ${REGION}"
+echo ""
+echo "🌐 Para ver tu dashboard:"
+echo "   gcloud run services describe ${SERVICE_NAME} --region=${REGION} --project=${PROJECT_ID} --format='value(status.url)'"
+echo ""
+echo "   O visita: https://console.cloud.google.com/run?project=${PROJECT_ID}"
 echo ""
 echo "🔧 Para ver logs en tiempo real:"
-echo "   gcloud logs tail --service=${SERVICE_NAME} --region=${REGION} --project=${PROJECT_ID}"
+echo "   gcloud run services logs read ${SERVICE_NAME} --region=${REGION} --project=${PROJECT_ID} --tail"
+echo ""
+echo "📊 Para ver información del servicio:"
+echo "   gcloud run services describe ${SERVICE_NAME} --region=${REGION} --project=${PROJECT_ID}"
 echo ""
 echo "🔄 Para deploy en otros ambientes:"
-echo "   ./build_deploy.sh dev    # Deploy en DEV (solo para testing)"
-echo "   ./build_deploy.sh qua    # Deploy en QUA (para validación)"
-echo "   ./build_deploy.sh pro    # Deploy en PRO (usuarios finales)"
+echo "   ./build_deploy.sh dev    # Deploy en DEV (desarrollo y testing)"
+echo "   ./build_deploy.sh qua    # Deploy en QUA (validación y QA)"
+echo "   ./build_deploy.sh pro    # Deploy en PRO (producción)"
 echo ""
-echo "🛑 Para detener el servicio:"
+echo "🛑 Para eliminar el servicio:"
 echo "   gcloud run services delete ${SERVICE_NAME} --region=${REGION} --project=${PROJECT_ID}"
 echo ""
 echo "📝 Notas:"
-echo "   - DEV: Para desarrollo y testing (solo tú)"
-echo "   - QUA: Para validación y QA (equipo interno)"
-echo "   - PRO: Para usuarios finales (producción)"
+echo "   - DEV: ${SERVICE_NAME}-dev en platform-partners-des"
+echo "   - QUA: ${SERVICE_NAME}-qua en platform-partners-qua"
+echo "   - PRO: ${SERVICE_NAME} en platform-partners-pro"
+echo "   - El script detecta automáticamente el ambiente según tu proyecto activo"
