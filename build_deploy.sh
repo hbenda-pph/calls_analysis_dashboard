@@ -46,7 +46,7 @@ else
             ENVIRONMENT="qua"
             echo "✅ Detectado: QUA (platform-partners-qua)"
             ;;
-        platform-partners-pro)
+        constant-height-455614-i0)
             ENVIRONMENT="pro"
             echo "✅ Detectado: PRO (platform-partners-pro)"
             ;;
@@ -71,9 +71,9 @@ case "$ENVIRONMENT" in
         SERVICE_ACCOUNT="streamlit-bigquery-sa@platform-partners-qua.iam.gserviceaccount.com"
         ;;
     pro)
-        PROJECT_ID="platform-partners-pro"
+        PROJECT_ID="constant-height-455614-i0"
         SERVICE_NAME="calls-analysis-dashboard"
-        SERVICE_ACCOUNT="streamlit-bigquery-sa@platform-partners-pro.iam.gserviceaccount.com"
+        SERVICE_ACCOUNT="streamlit-bigquery-sa@constant-height-455614-i0.iam.gserviceaccount.com"
         ;;
 esac
 
