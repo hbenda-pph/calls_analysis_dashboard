@@ -53,6 +53,95 @@ st.set_page_config(
 apply_standard_styles()
 
 # =============================================================================
+# CONFIGURACIÓN DE MODO DARK
+# =============================================================================
+
+def apply_dark_mode():
+    """Aplicar estilos dark mode a Streamlit"""
+    dark_mode_css = """
+    <style>
+    /* Fondo oscuro */
+    .main {
+        background-color: #0e1117 !important;
+        color: #fafafa !important;
+    }
+    
+    .block-container {
+        background-color: #0e1117 !important;
+        color: #fafafa !important;
+    }
+    
+    /* Sidebar oscuro */
+    .css-1d391kg {
+        background-color: #262730 !important;
+    }
+    
+    /* Texto claro */
+    h1, h2, h3, h4, h5, h6, p, div, span, label {
+        color: #fafafa !important;
+    }
+    
+    /* Inputs y selects */
+    .stSelectbox > div > div {
+        background-color: #262730 !important;
+        color: #fafafa !important;
+    }
+    
+    .stTextInput > div > div > input {
+        background-color: #262730 !important;
+        color: #fafafa !important;
+    }
+    
+    /* Dataframes */
+    .stDataFrame {
+        background-color: #1e1e1e !important;
+    }
+    
+    /* Metricas */
+    [data-testid="stMetricValue"] {
+        color: #fafafa !important;
+    }
+    
+    /* Captions */
+    .stCaption {
+        color: #b0b0b0 !important;
+    }
+    
+    /* Markdown */
+    .stMarkdown {
+        color: #fafafa !important;
+    }
+    </style>
+    """
+    st.markdown(dark_mode_css, unsafe_allow_html=True)
+
+# Función para aplicar modo dark a gráficos matplotlib
+def setup_matplotlib_dark():
+    """Configurar matplotlib para modo dark"""
+    plt.style.use('dark_background')
+    # Configurar colores para modo dark
+    plt.rcParams['figure.facecolor'] = '#0e1117'
+    plt.rcParams['axes.facecolor'] = '#1e1e1e'
+    plt.rcParams['axes.edgecolor'] = '#666666'
+    plt.rcParams['axes.labelcolor'] = '#fafafa'
+    plt.rcParams['text.color'] = '#fafafa'
+    plt.rcParams['xtick.color'] = '#fafafa'
+    plt.rcParams['ytick.color'] = '#fafafa'
+    plt.rcParams['grid.color'] = '#333333'
+
+def setup_matplotlib_light():
+    """Configurar matplotlib para modo light"""
+    plt.style.use('default')
+    plt.rcParams['figure.facecolor'] = 'white'
+    plt.rcParams['axes.facecolor'] = 'white'
+    plt.rcParams['axes.edgecolor'] = 'black'
+    plt.rcParams['axes.labelcolor'] = 'black'
+    plt.rcParams['text.color'] = 'black'
+    plt.rcParams['xtick.color'] = 'black'
+    plt.rcParams['ytick.color'] = 'black'
+    plt.rcParams['grid.color'] = '#cccccc'
+
+# =============================================================================
 # CONFIGURACIÓN DE GETTEXT
 # =============================================================================
 
@@ -95,9 +184,12 @@ def _(text):
 # =============================================================================
 
 @st.cache_data(ttl=3600)  # Cache por 1 hora (3600 segundos)
-def get_calls_info():
+def get_calls_info(PROJECT="pph-central"):
     """
     Extrae información consolidada de llamadas de ServiceTitan desde BigQuery.
+    
+    Args:
+        PROJECT: Proyecto de BigQuery a usar ('pph-central' o 'pph-inbox')
     """
     try:
         client = bigquery.Client()
@@ -111,8 +203,8 @@ def get_calls_info():
                 , EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)) AS `year`
                 , EXTRACT(MONTH FROM DATE(cl.lead_call_created_on)) AS `month`
                 , COUNT(cl.lead_call_id) AS `calls`
-             FROM `pph-central.analytical.vw_consolidated_call_inbound_location` cl
-             JOIN `pph-central.settings.companies` c ON cl.company_id = c.company_id
+             FROM `{PROJECT}.analytical.vw_consolidated_call_inbound_location` cl
+             JOIN `{PROJECT}.settings.companies` c ON cl.company_id = c.company_id
             WHERE DATE(cl.lead_call_created_on) < DATE("2025-10-01")
               AND EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)) >= 2015
             GROUP BY c.company_id, c.company_name, cl.location_state, EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)), EXTRACT(MONTH FROM DATE(cl.lead_call_created_on))
@@ -614,22 +706,44 @@ def calculate_midpoint_lines(months, calls, peaks, valleys):
     
     return midpoint_lines
 
-def create_inflection_chart(months, calls, peaks, valleys, company_id, company_name, ylabel_text="Percentage of Total Calls (%)", title_suffix="Peaks and Valleys Analysis", analysis_mode="Percentages"):
+def create_inflection_chart(months, calls, peaks, valleys, company_id, company_name, ylabel_text="Percentage of Total Calls (%)", title_suffix="Peaks and Valleys Analysis", analysis_mode="Percentages", dark_mode=False):
     """
     Crea el gráfico de puntos de inflexión para Streamlit
     """
     # Crear figura
     fig, ax = plt.subplots(figsize=(12, 8))
     
+    # Ajustar colores según el modo
+    if dark_mode:
+        line_color = '#4FC3F7'  # Azul claro para dark mode
+        peak_color = '#66BB6A'  # Verde claro para dark mode
+        valley_color = '#EF5350'  # Rojo claro para dark mode
+        peak_edge = '#43A047'  # Verde oscuro para dark mode
+        valley_edge = '#E53935'  # Rojo oscuro para dark mode
+        peak_bg = '#81C784'  # Verde claro para dark mode
+        valley_bg = '#EF5350'  # Rojo claro para dark mode
+        peak_text = '#1B5E20'  # Verde muy oscuro para texto en dark mode
+        valley_text = '#B71C1C'  # Rojo muy oscuro para texto en dark mode
+    else:
+        line_color = 'blue'  # Azul para light mode
+        peak_color = 'green'  # Verde para light mode
+        valley_color = 'red'  # Rojo para light mode
+        peak_edge = 'darkgreen'  # Verde oscuro para light mode
+        valley_edge = 'darkred'  # Rojo oscuro para light mode
+        peak_bg = 'lightgreen'  # Verde claro para light mode
+        valley_bg = 'lightcoral'  # Rojo claro para light mode
+        peak_text = 'darkgreen'  # Verde oscuro para texto en light mode
+        valley_text = 'darkred'  # Rojo oscuro para texto en light mode
+    
     # Línea suave
     if len(months) > 3:
         x_smooth = np.linspace(months.min(), months.max(), 100)
         spl = make_interp_spline(months, calls, k=3)
         y_smooth = spl(x_smooth)
-        ax.plot(x_smooth, y_smooth, '-', color='blue', linewidth=3, alpha=0.8)
+        ax.plot(x_smooth, y_smooth, '-', color=line_color, linewidth=3, alpha=0.8)
     
     # Datos originales
-    ax.plot(months, calls, 'o-', color='blue', linewidth=2, markersize=8, alpha=0.7)
+    ax.plot(months, calls, 'o-', color=line_color, linewidth=2, markersize=8, alpha=0.7)
     
     # Calcular líneas de punto medio
     midpoint_lines = calculate_midpoint_lines(months, calls, peaks, valleys)
@@ -727,9 +841,40 @@ def main():
     # Título principal
     st.markdown(f"## {_('ServiceTitan - Inflection Points Analysis')}")
     
-    # Cargar datos
+    # Panel de control - Toggle para seleccionar proyecto
+    with st.sidebar:
+        st.markdown(f"**{_('Control Panel')}**")
+        
+        # Toggle para seleccionar proyecto (sin mensajes distintivos)
+        use_inbox_project = st.toggle(
+            _("Use Inbox Project"),
+            value=False
+        )
+        
+        # Determinar proyecto a usar
+        PROJECT = "pph-inbox" if use_inbox_project else "pph-central"
+        
+        # Selector de modo dark/light
+        theme_mode = st.selectbox(
+            "🌓 Theme",
+            options=["Light", "Dark"],
+            index=0
+        )
+        
+        # Aplicar modo dark si está seleccionado
+        if theme_mode == "Dark":
+            apply_dark_mode()
+            setup_matplotlib_dark()
+            dark_mode = True
+        else:
+            setup_matplotlib_light()
+            dark_mode = False
+        
+        st.markdown("---")
+    
+    # Cargar datos con el proyecto seleccionado
     with st.spinner(_("Loading data from BigQuery...")):
-        calls_df = get_calls_info()
+        calls_df = get_calls_info(PROJECT=PROJECT)
     
     if calls_df is None:
         st.error(_("Error loading data. Check BigQuery connection."))
@@ -739,10 +884,8 @@ def main():
     companies_info = calls_df[['company_id', 'company_name']].drop_duplicates().sort_values('company_id')
     companies_dict = dict(zip(companies_info['company_id'], companies_info['company_name']))
     
-    # Panel de control
+    # Continuar con el sidebar
     with st.sidebar:
-        st.markdown(f"**{_('Control Panel')}**")
-        
         # Selector de compañía
         selected_company_name = st.selectbox(
             _("Company"),
