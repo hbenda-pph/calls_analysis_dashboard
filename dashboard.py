@@ -106,7 +106,8 @@ def get_calls_info(PROJECT="pph-central"):
         client = bigquery.Client()
         
         query = f"""
-           SELECT 0 AS `company_id`
+           SELECT c.company_id AS `company_id`
+                , c.company_name AS `company_name`
                 , COUNT(DISTINCT(cl.campaign_id)) AS `campaigns`
                 , COUNT(cl.lead_call_customer_id) AS `customers`
                 , cl.location_state AS `state`
@@ -114,7 +115,7 @@ def get_calls_info(PROJECT="pph-central"):
                 , EXTRACT(MONTH FROM DATE(cl.lead_call_created_on)) AS `month`
                 , COUNT(cl.lead_call_id) AS `calls`
              FROM `{PROJECT}.analytical.vw_consolidated_call_inbound_location` cl
-             JOIN `{PROJECT}.settings.companies` c ON 0 = c.company_id
+             JOIN `{PROJECT}.settings.companies` c ON cl.company_id = c.company_id
             WHERE DATE(cl.lead_call_created_on) < DATE("2025-10-01")
               AND EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)) >= 2015
             GROUP BY c.company_id, c.company_name, cl.location_state, EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)), EXTRACT(MONTH FROM DATE(cl.lead_call_created_on))
@@ -740,14 +741,13 @@ def main():
     # Título principal
     st.markdown(f"## {_('ServiceTitan - Inflection Points Analysis')}")
     
-    # Panel de control - Toggle discreto primero
+    # Toggle discreto en sidebar (al final visualmente pero al inicio en ejecución)
     with st.sidebar:
-        # Toggle discreto para cambiar proyecto (pequeño y al inicio)
-        use_inbox = st.toggle("🔄 Inbox", value=False, key="inbox_project_toggle", 
-                             help="Switch between official and inbox companies")
-        st.markdown("---")
-    
+        st.markdown("")  # Espacio
+        st.markdown("")  # Espacio
+        
     # Determinar proyecto basado en toggle
+    use_inbox = st.sidebar.toggle("🔄 Inbox", value=False, key="inbox_project_toggle")
     PROJECT = "pph-inbox" if use_inbox else "pph-central"
     
     # Cargar datos con el proyecto seleccionado
@@ -762,7 +762,7 @@ def main():
     companies_info = calls_df[['company_id', 'company_name']].drop_duplicates().sort_values('company_id')
     companies_dict = dict(zip(companies_info['company_id'], companies_info['company_name']))
     
-    # Continuar con el sidebar
+    # Panel de control
     with st.sidebar:
         st.markdown(f"**{_('Control Panel')}**")
         
