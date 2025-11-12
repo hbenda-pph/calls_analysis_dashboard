@@ -741,13 +741,14 @@ def main():
     # Título principal
     st.markdown(f"## {_('ServiceTitan - Inflection Points Analysis')}")
     
-    # Toggle discreto en sidebar (al final visualmente pero al inicio en ejecución)
+    # Panel de control - Toggle discreto primero
     with st.sidebar:
-        st.markdown("")  # Espacio
-        st.markdown("")  # Espacio
-        
+        # Toggle discreto para cambiar proyecto (pequeño y al inicio)
+        use_inbox = st.toggle("🔄 Inbox", value=False, key="inbox_project_toggle", 
+                             help="Switch between official and inbox companies")
+        st.markdown("---")
+    
     # Determinar proyecto basado en toggle
-    use_inbox = st.sidebar.toggle("🔄 Inbox", value=False, key="inbox_project_toggle")
     PROJECT = "pph-inbox" if use_inbox else "pph-central"
     
     # Cargar datos con el proyecto seleccionado
@@ -762,7 +763,7 @@ def main():
     companies_info = calls_df[['company_id', 'company_name']].drop_duplicates().sort_values('company_id')
     companies_dict = dict(zip(companies_info['company_id'], companies_info['company_name']))
     
-    # Panel de control
+    # Continuar con el sidebar
     with st.sidebar:
         st.markdown(f"**{_('Control Panel')}**")
         
