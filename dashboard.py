@@ -106,8 +106,7 @@ def get_calls_info(PROJECT="pph-central"):
         client = bigquery.Client()
         
         query = f"""
-           SELECT c.company_id AS `company_id`
-                , c.company_name AS `company_name`
+           SELECT 0 AS `company_id`
                 , COUNT(DISTINCT(cl.campaign_id)) AS `campaigns`
                 , COUNT(cl.lead_call_customer_id) AS `customers`
                 , cl.location_state AS `state`
@@ -115,7 +114,7 @@ def get_calls_info(PROJECT="pph-central"):
                 , EXTRACT(MONTH FROM DATE(cl.lead_call_created_on)) AS `month`
                 , COUNT(cl.lead_call_id) AS `calls`
              FROM `{PROJECT}.analytical.vw_consolidated_call_inbound_location` cl
-             JOIN `{PROJECT}.settings.companies` c ON cl.company_id = c.company_id
+             JOIN `{PROJECT}.settings.companies` c ON 0 = c.company_id
             WHERE DATE(cl.lead_call_created_on) < DATE("2025-10-01")
               AND EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)) >= 2015
             GROUP BY c.company_id, c.company_name, cl.location_state, EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)), EXTRACT(MONTH FROM DATE(cl.lead_call_created_on))
