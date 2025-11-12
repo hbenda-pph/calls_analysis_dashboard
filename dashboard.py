@@ -106,8 +106,8 @@ def get_calls_info(PROJECT="pph-central"):
         client = bigquery.Client()
         
         query = f"""
-           SELECT 0 AS `company_id`
-                , "Clarks Mechanical LLC" AS `company_name`
+           SELECT c.company_id AS `company_id`
+                , c.company_name AS `company_name`
                 , COUNT(DISTINCT(cl.campaign_id)) AS `campaigns`
                 , COUNT(cl.lead_call_customer_id) AS `customers`
                 , cl.location_state AS `state`
@@ -115,7 +115,7 @@ def get_calls_info(PROJECT="pph-central"):
                 , EXTRACT(MONTH FROM DATE(cl.lead_call_created_on)) AS `month`
                 , COUNT(cl.lead_call_id) AS `calls`
              FROM `{PROJECT}.analytical.vw_consolidated_call_inbound_location` cl
-             JOIN `{PROJECT}.settings.companies` c ON 0 = c.company_id
+             JOIN `{PROJECT}.settings.companies` c ON cl.company_id = c.company_id
             WHERE DATE(cl.lead_call_created_on) < DATE("2025-10-01")
               AND EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)) >= 2015
             GROUP BY c.company_id, c.company_name, cl.location_state, EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)), EXTRACT(MONTH FROM DATE(cl.lead_call_created_on))
@@ -741,12 +741,14 @@ def main():
     # Título principal
     st.markdown(f"## {_('ServiceTitan - Inflection Points Analysis')}")
     
-    # Determinar proyecto (el toggle se renderiza al final del sidebar pero necesitamos el valor ahora)
-    # Usamos session_state para mantener el valor
-    if 'use_inbox_project' not in st.session_state:
-        st.session_state.use_inbox_project = False
-    
-    PROJECT = "pph-inbox" if st.session_state.use_inbox_project else "pph-central"
+    # Toggle discreto en sidebar (al final visualmente pero al inicio en ejecución)
+    with st.sidebar:
+        st.markdown("")  # Espacio
+        st.markdown("")  # Espacio
+        
+    # Determinar proyecto basado en toggle
+    use_inbox = st.sidebar.toggle("🔄 Inbox", value=False, key="inbox_project_toggle")
+    PROJECT = "pph-inbox" if use_inbox else "pph-central"
     
     # Cargar datos con el proyecto seleccionado
     with st.spinner(_("Loading data from BigQuery...")):
@@ -791,18 +793,6 @@ def main():
         st.caption(f"📊 ID: {company_id}")
         st.caption(f"📅 {years_range}")
         st.caption(f"📞 {total_calls_company:,} calls")
-        
-        # Espacio y toggle de inbox al final (discreto)
-        st.markdown("---")
-        st.markdown("")
-        st.markdown("")
-        
-        # Toggle discreto para proyecto inbox (al final del sidebar)
-        st.session_state.use_inbox_project = st.toggle(
-            "🔄 Inbox",
-            value=st.session_state.use_inbox_project,
-            key="inbox_toggle_bottom"
-        )
     
     # Método híbrido como predeterminado
     detection_method = "Hybrid (3-4 months)"
