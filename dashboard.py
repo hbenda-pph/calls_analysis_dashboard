@@ -115,7 +115,7 @@ def get_calls_info(PROJECT="pph-central"):
                 , EXTRACT(MONTH FROM DATE(cl.lead_call_created_on)) AS `month`
                 , COUNT(cl.lead_call_id) AS `calls`
              FROM `{PROJECT}.analytical.vw_consolidated_call_inbound_location` cl
-             JOIN `{PROJECT}.settings.companies` c ON cl.company_id = c.company_id
+             JOIN `{PROJECT}.settings.companies` c ON 0 = c.company_id
             WHERE DATE(cl.lead_call_created_on) < DATE("2025-10-01")
               AND EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)) >= 2015
             GROUP BY c.company_id, c.company_name, cl.location_state, EXTRACT(YEAR FROM DATE(cl.lead_call_created_on)), EXTRACT(MONTH FROM DATE(cl.lead_call_created_on))
