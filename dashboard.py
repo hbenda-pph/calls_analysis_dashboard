@@ -690,8 +690,8 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
         # Anotaciones para picos (debajo de la curva)
         for peak in peaks:
             # Determinar formato según el modo de análisis
-            if analysis_mode == "Absolute Numbers":
-                value_text = f'{calls[peak]:.0f}'  # Enteros para cantidades
+            if analysis_mode == "Absolute":
+                value_text = f'{int(calls[peak]):,}'  # Enteros con separador de miles para cantidades
             else:
                 value_text = f'{calls[peak]:.2f}%'  # 2 decimales para porcentajes
             
@@ -706,8 +706,8 @@ def create_inflection_chart(months, calls, peaks, valleys, company_id, company_n
         # Anotaciones para valles (encima de la curva)
         for valley in valleys:
             # Determinar formato según el modo de análisis
-            if analysis_mode == "Absolute Numbers":
-                value_text = f'{calls[valley]:.0f}'  # Enteros para cantidades
+            if analysis_mode == "Absolute":
+                value_text = f'{int(calls[valley]):,}'  # Enteros con separador de miles para cantidades
             else:
                 value_text = f'{calls[valley]:.2f}%'  # 2 decimales para porcentajes
             
@@ -741,13 +741,12 @@ def main():
     # Título principal
     st.markdown(f"## {_('ServiceTitan - Inflection Points Analysis')}")
     
-    # Toggle temporal para determinar proyecto (se moverá al final del sidebar después)
-    use_inbox_project_temp = st.sidebar.toggle(
-        _("Use Inbox Project"),
-        value=False,
-        key="temp_inbox_toggle"
-    )
-    PROJECT = "pph-inbox" if use_inbox_project_temp else "pph-central"
+    # Determinar proyecto (el toggle se renderiza al final del sidebar pero necesitamos el valor ahora)
+    # Usamos session_state para mantener el valor
+    if 'use_inbox_project' not in st.session_state:
+        st.session_state.use_inbox_project = False
+    
+    PROJECT = "pph-inbox" if st.session_state.use_inbox_project else "pph-central"
     
     # Cargar datos con el proyecto seleccionado
     with st.spinner(_("Loading data from BigQuery...")):
@@ -797,6 +796,13 @@ def main():
         st.markdown("---")
         st.markdown("")
         st.markdown("")
+        
+        # Toggle discreto para proyecto inbox (al final del sidebar)
+        st.session_state.use_inbox_project = st.toggle(
+            "🔄 Inbox",
+            value=st.session_state.use_inbox_project,
+            key="inbox_toggle_bottom"
+        )
     
     # Método híbrido como predeterminado
     detection_method = "Hybrid (3-4 months)"
