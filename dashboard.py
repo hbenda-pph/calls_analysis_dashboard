@@ -106,8 +106,8 @@ def get_calls_info(PROJECT="pph-central"):
         client = bigquery.Client()
         
         query = f"""
-           SELECT c.company_id AS `company_id`
-                , c.company_name AS `company_name`
+           SELECT 0 AS `company_id`
+                , "Clarks Mechanical LLC" AS `company_name`
                 , COUNT(DISTINCT(cl.campaign_id)) AS `campaigns`
                 , COUNT(cl.lead_call_customer_id) AS `customers`
                 , cl.location_state AS `state`
