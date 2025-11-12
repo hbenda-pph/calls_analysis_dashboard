@@ -553,6 +553,144 @@ calls_analysis_dashboard/
 
 ---
 
+## 🔧 **Troubleshooting: Permisos de Cloud Build**
+
+Si encuentras errores de permisos durante el deploy, sigue estos pasos en **Cloud Shell**:
+
+### **Error 1: Acceso al Bucket de Cloud Build**
+```
+ERROR: 403: storage.objects.get access denied
+```
+
+**Solución**:
+```bash
+PROJECT_NUMBER=$(gcloud projects describe platform-partners-des --format="value(projectNumber)")
+
+gsutil iam ch serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com:objectViewer gs://platform-partners-des_cloudbuild
+gsutil iam ch serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com:objectCreator gs://platform-partners-des_cloudbuild
+```
+
+### **Error 2: Subida de Imágenes a GCR**
+```
+ERROR: denied: Permission denied on Google Container Registry
+```
+
+**Solución**:
+```bash
+PROJECT_NUMBER=$(gcloud projects describe platform-partners-des --format="value(projectNumber)")
+
+gcloud projects add-iam-policy-binding platform-partners-des \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role="roles/storage.admin"
+```
+
+### **Error 3: Permisos de Artifact Registry**
+```
+ERROR: denied: Permission "artifactregistry.repositories.uploadArtifacts" denied
+```
+
+**Solución**:
+```bash
+PROJECT_NUMBER=$(gcloud projects describe platform-partners-des --format="value(projectNumber)")
+
+# Habilitar API de Artifact Registry
+gcloud services enable artifactregistry.googleapis.com --project=platform-partners-des
+
+# Otorgar permisos de Artifact Registry
+gcloud projects add-iam-policy-binding platform-partners-des \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role="roles/artifactregistry.writer"
+
+# Otorgar rol completo de Cloud Build (recomendado)
+gcloud projects add-iam-policy-binding platform-partners-des \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role="roles/cloudbuild.builds.builder"
+
+# Otorgar permiso para escribir logs
+gcloud projects add-iam-policy-binding platform-partners-des \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role="roles/logging.logWriter"
+```
+
+### **Solución Todo-en-Uno** (Recomendado)
+Si quieres configurar todos los permisos de una vez:
+
+```bash
+PROJECT_NUMBER=$(gcloud projects describe platform-partners-des --format="value(projectNumber)")
+SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+# Habilitar APIs necesarias
+gcloud services enable cloudbuild.googleapis.com --project=platform-partners-des
+gcloud services enable artifactregistry.googleapis.com --project=platform-partners-des
+
+# Otorgar todos los roles necesarios
+gcloud projects add-iam-policy-binding platform-partners-des \
+    --member="serviceAccount:${SERVICE_ACCOUNT}" \
+    --role="roles/cloudbuild.builds.builder"
+
+gcloud projects add-iam-policy-binding platform-partners-des \
+    --member="serviceAccount:${SERVICE_ACCOUNT}" \
+    --role="roles/storage.admin"
+
+gcloud projects add-iam-policy-binding platform-partners-des \
+    --member="serviceAccount:${SERVICE_ACCOUNT}" \
+    --role="roles/artifactregistry.writer"
+
+gcloud projects add-iam-policy-binding platform-partners-des \
+    --member="serviceAccount:${SERVICE_ACCOUNT}" \
+    --role="roles/logging.logWriter"
+
+# Permisos para el bucket específico
+gsutil iam ch serviceAccount:${SERVICE_ACCOUNT}:objectViewer gs://platform-partners-des_cloudbuild
+gsutil iam ch serviceAccount:${SERVICE_ACCOUNT}:objectCreator gs://platform-partners-des_cloudbuild
+
+echo "✅ Todos los permisos configurados correctamente"
+```
+
+**Nota**: Estos comandos deben ejecutarse **una sola vez** por proyecto. Si trabajas en múltiples ambientes (DEV/QUA/PRO), repite estos comandos para cada proyecto cambiando `platform-partners-des` por el proyecto correspondiente.
+
+### **Error 4: Permisos de BigQuery cross-project (pph-inbox)**
+```
+ERROR: 403 Access Denied: Table pph-inbox:analytical.vw_consolidated_call_inbound_location
+```
+
+**Contexto**: La aplicación tiene un toggle para cambiar entre compañías oficiales (`pph-central`) y compañías inbox (`pph-inbox`). La cuenta de servicio de la app corre en `platform-partners-des` pero necesita acceso a datos en el proyecto `pph-inbox`.
+
+**Solución**:
+```bash
+# Otorgar permisos de BigQuery en el proyecto pph-inbox a la cuenta de servicio de DEV
+gcloud projects add-iam-policy-binding pph-inbox \
+    --member="serviceAccount:streamlit-bigquery-sa@platform-partners-des.iam.gserviceaccount.com" \
+    --role="roles/bigquery.dataViewer"
+
+gcloud projects add-iam-policy-binding pph-inbox \
+    --member="serviceAccount:streamlit-bigquery-sa@platform-partners-des.iam.gserviceaccount.com" \
+    --role="roles/bigquery.jobUser"
+```
+
+**Para otros ambientes** (QUA/PRO), ajusta la cuenta de servicio:
+```bash
+# QUA
+gcloud projects add-iam-policy-binding pph-inbox \
+    --member="serviceAccount:streamlit-bigquery-sa@platform-partners-qua.iam.gserviceaccount.com" \
+    --role="roles/bigquery.dataViewer"
+
+gcloud projects add-iam-policy-binding pph-inbox \
+    --member="serviceAccount:streamlit-bigquery-sa@platform-partners-qua.iam.gserviceaccount.com" \
+    --role="roles/bigquery.jobUser"
+
+# PRO
+gcloud projects add-iam-policy-binding pph-inbox \
+    --member="serviceAccount:streamlit-bigquery-sa@constant-height-455614-i0.iam.gserviceaccount.com" \
+    --role="roles/bigquery.dataViewer"
+
+gcloud projects add-iam-policy-binding pph-inbox \
+    --member="serviceAccount:streamlit-bigquery-sa@constant-height-455614-i0.iam.gserviceaccount.com" \
+    --role="roles/bigquery.jobUser"
+```
+
+---
+
 **Desarrollado por**: Platform Partners Team  
 **Fecha**: Octubre 2025  
 **Versión**: 2.0  

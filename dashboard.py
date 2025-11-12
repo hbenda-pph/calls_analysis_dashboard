@@ -53,95 +53,6 @@ st.set_page_config(
 apply_standard_styles()
 
 # =============================================================================
-# CONFIGURACIÓN DE MODO DARK
-# =============================================================================
-
-def apply_dark_mode():
-    """Aplicar estilos dark mode a Streamlit"""
-    dark_mode_css = """
-    <style>
-    /* Fondo oscuro */
-    .main {
-        background-color: #0e1117 !important;
-        color: #fafafa !important;
-    }
-    
-    .block-container {
-        background-color: #0e1117 !important;
-        color: #fafafa !important;
-    }
-    
-    /* Sidebar oscuro */
-    .css-1d391kg {
-        background-color: #262730 !important;
-    }
-    
-    /* Texto claro */
-    h1, h2, h3, h4, h5, h6, p, div, span, label {
-        color: #fafafa !important;
-    }
-    
-    /* Inputs y selects */
-    .stSelectbox > div > div {
-        background-color: #262730 !important;
-        color: #fafafa !important;
-    }
-    
-    .stTextInput > div > div > input {
-        background-color: #262730 !important;
-        color: #fafafa !important;
-    }
-    
-    /* Dataframes */
-    .stDataFrame {
-        background-color: #1e1e1e !important;
-    }
-    
-    /* Metricas */
-    [data-testid="stMetricValue"] {
-        color: #fafafa !important;
-    }
-    
-    /* Captions */
-    .stCaption {
-        color: #b0b0b0 !important;
-    }
-    
-    /* Markdown */
-    .stMarkdown {
-        color: #fafafa !important;
-    }
-    </style>
-    """
-    st.markdown(dark_mode_css, unsafe_allow_html=True)
-
-# Función para aplicar modo dark a gráficos matplotlib
-def setup_matplotlib_dark():
-    """Configurar matplotlib para modo dark"""
-    plt.style.use('dark_background')
-    # Configurar colores para modo dark
-    plt.rcParams['figure.facecolor'] = '#0e1117'
-    plt.rcParams['axes.facecolor'] = '#1e1e1e'
-    plt.rcParams['axes.edgecolor'] = '#666666'
-    plt.rcParams['axes.labelcolor'] = '#fafafa'
-    plt.rcParams['text.color'] = '#fafafa'
-    plt.rcParams['xtick.color'] = '#fafafa'
-    plt.rcParams['ytick.color'] = '#fafafa'
-    plt.rcParams['grid.color'] = '#333333'
-
-def setup_matplotlib_light():
-    """Configurar matplotlib para modo light"""
-    plt.style.use('default')
-    plt.rcParams['figure.facecolor'] = 'white'
-    plt.rcParams['axes.facecolor'] = 'white'
-    plt.rcParams['axes.edgecolor'] = 'black'
-    plt.rcParams['axes.labelcolor'] = 'black'
-    plt.rcParams['text.color'] = 'black'
-    plt.rcParams['xtick.color'] = 'black'
-    plt.rcParams['ytick.color'] = 'black'
-    plt.rcParams['grid.color'] = '#cccccc'
-
-# =============================================================================
 # CONFIGURACIÓN DE GETTEXT
 # =============================================================================
 
@@ -706,34 +617,23 @@ def calculate_midpoint_lines(months, calls, peaks, valleys):
     
     return midpoint_lines
 
-def create_inflection_chart(months, calls, peaks, valleys, company_id, company_name, ylabel_text="Percentage of Total Calls (%)", title_suffix="Peaks and Valleys Analysis", analysis_mode="Percentages", dark_mode=False):
+def create_inflection_chart(months, calls, peaks, valleys, company_id, company_name, ylabel_text="Percentage of Total Calls (%)", title_suffix="Peaks and Valleys Analysis", analysis_mode="Percentages"):
     """
     Crea el gráfico de puntos de inflexión para Streamlit
     """
     # Crear figura
     fig, ax = plt.subplots(figsize=(12, 8))
     
-    # Ajustar colores según el modo
-    if dark_mode:
-        line_color = '#4FC3F7'  # Azul claro para dark mode
-        peak_color = '#66BB6A'  # Verde claro para dark mode
-        valley_color = '#EF5350'  # Rojo claro para dark mode
-        peak_edge = '#43A047'  # Verde oscuro para dark mode
-        valley_edge = '#E53935'  # Rojo oscuro para dark mode
-        peak_bg = '#81C784'  # Verde claro para dark mode
-        valley_bg = '#EF5350'  # Rojo claro para dark mode
-        peak_text = '#1B5E20'  # Verde muy oscuro para texto en dark mode
-        valley_text = '#B71C1C'  # Rojo muy oscuro para texto en dark mode
-    else:
-        line_color = 'blue'  # Azul para light mode
-        peak_color = 'green'  # Verde para light mode
-        valley_color = 'red'  # Rojo para light mode
-        peak_edge = 'darkgreen'  # Verde oscuro para light mode
-        valley_edge = 'darkred'  # Rojo oscuro para light mode
-        peak_bg = 'lightgreen'  # Verde claro para light mode
-        valley_bg = 'lightcoral'  # Rojo claro para light mode
-        peak_text = 'darkgreen'  # Verde oscuro para texto en light mode
-        valley_text = 'darkred'  # Rojo oscuro para texto en light mode
+    # Colores estándar
+    line_color = 'blue'
+    peak_color = 'green'
+    valley_color = 'red'
+    peak_edge = 'darkgreen'
+    valley_edge = 'darkred'
+    peak_bg = 'lightgreen'
+    valley_bg = 'lightcoral'
+    peak_text = 'darkgreen'
+    valley_text = 'darkred'
     
     # Línea suave
     if len(months) > 3:
@@ -841,36 +741,13 @@ def main():
     # Título principal
     st.markdown(f"## {_('ServiceTitan - Inflection Points Analysis')}")
     
-    # Panel de control - Toggle para seleccionar proyecto
-    with st.sidebar:
-        st.markdown(f"**{_('Control Panel')}**")
-        
-        # Toggle para seleccionar proyecto (sin mensajes distintivos)
-        use_inbox_project = st.toggle(
-            _("Use Inbox Project"),
-            value=False
-        )
-        
-        # Determinar proyecto a usar
-        PROJECT = "pph-inbox" if use_inbox_project else "pph-central"
-        
-        # Selector de modo dark/light
-        theme_mode = st.selectbox(
-            "🌓 Theme",
-            options=["Light", "Dark"],
-            index=0
-        )
-        
-        # Aplicar modo dark si está seleccionado
-        if theme_mode == "Dark":
-            apply_dark_mode()
-            setup_matplotlib_dark()
-            dark_mode = True
-        else:
-            setup_matplotlib_light()
-            dark_mode = False
-        
-        st.markdown("---")
+    # Toggle temporal para determinar proyecto (se moverá al final del sidebar después)
+    use_inbox_project_temp = st.sidebar.toggle(
+        _("Use Inbox Project"),
+        value=False,
+        key="temp_inbox_toggle"
+    )
+    PROJECT = "pph-inbox" if use_inbox_project_temp else "pph-central"
     
     # Cargar datos con el proyecto seleccionado
     with st.spinner(_("Loading data from BigQuery...")):
@@ -884,8 +761,10 @@ def main():
     companies_info = calls_df[['company_id', 'company_name']].drop_duplicates().sort_values('company_id')
     companies_dict = dict(zip(companies_info['company_id'], companies_info['company_name']))
     
-    # Continuar con el sidebar
+    # Panel de control
     with st.sidebar:
+        st.markdown(f"**{_('Control Panel')}**")
+        
         # Selector de compañía
         selected_company_name = st.selectbox(
             _("Company"),
@@ -913,6 +792,11 @@ def main():
         st.caption(f"📊 ID: {company_id}")
         st.caption(f"📅 {years_range}")
         st.caption(f"📞 {total_calls_company:,} calls")
+        
+        # Espacio y toggle de inbox al final (discreto)
+        st.markdown("---")
+        st.markdown("")
+        st.markdown("")
     
     # Método híbrido como predeterminado
     detection_method = "Hybrid (3-4 months)"
